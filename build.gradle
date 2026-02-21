@@ -1,7 +1,7 @@
 plugins {
-    id 'java'
-    id 'org.springframework.boot' version '4.0.3'
-    id 'io.spring.dependency-management' version '1.1.7'
+	id 'java'
+	id 'org.springframework.boot' version '4.0.3'
+	id 'io.spring.dependency-management' version '1.1.7'
 }
 
 group = 'com.ceshi'
@@ -9,37 +9,88 @@ version = '0.0.1-SNAPSHOT'
 description = 'forest'
 
 java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(17)
-    }
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(17)
+	}
 }
 
 configurations {
-    compileOnly {
-        extendsFrom annotationProcessor
-    }
+	compileOnly {
+		extendsFrom annotationProcessor
+	}
+	// 排除有问题的 JAI 依赖
+	all {
+		exclude group: 'javax.media', module: 'jai_core'
+		exclude group: 'com.sun.media', module: 'jai_codec'
+	}
 }
 
 repositories {
-    mavenCentral()
+	mavenCentral()
+	// GeoTools 仓库
+	maven {
+		name = 'OSGeo Release Repository'
+		url = 'https://repo.osgeo.org/repository/release/'
+	}
 }
 
 dependencies {
-    implementation 'org.springframework.boot:spring-boot-starter-data-jdbc'
-    implementation 'org.springframework.boot:spring-boot-starter-validation'
-    implementation 'org.springframework.boot:spring-boot-starter-webmvc'
-    implementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter:4.0.1'
-    compileOnly 'org.projectlombok:lombok'
-    developmentOnly 'org.springframework.boot:spring-boot-devtools'
-    runtimeOnly 'org.postgresql:postgresql'
-    annotationProcessor 'org.projectlombok:lombok'
-    testImplementation 'org.springframework.boot:spring-boot-starter-data-jdbc-test'
-    testImplementation 'org.springframework.boot:spring-boot-starter-validation-test'
-    testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
-    testImplementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter-test:4.0.1'
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+	// ========== 你的原始依赖 ==========
+	implementation 'org.springframework.boot:spring-boot-starter-data-jdbc'
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
+	implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+	implementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter:4.0.1'
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	compileOnly 'org.projectlombok:lombok'
+	developmentOnly 'org.springframework.boot:spring-boot-devtools'
+	runtimeOnly 'org.postgresql:postgresql'
+	annotationProcessor 'org.projectlombok:lombok'
+	testImplementation 'org.springframework.boot:spring-boot-starter-data-jdbc-test'
+	testImplementation 'org.springframework.boot:spring-boot-starter-validation-test'
+	testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+	testImplementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter-test:4.0.1'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+	// ========== JTS 核心 ==========
+	implementation 'org.locationtech.jts:jts-core:1.19.0'
+
+	// ========== GeoTools 核心模块（按需添加）==========
+
+	// 几何工具类（包含 JTS 转换）
+	implementation('org.geotools:gt-main:29.0') {
+		transitive = false
+	}
+
+	// 坐标参考系统（CRS）
+	implementation('org.geotools:gt-referencing:29.0') {
+		transitive = false
+	}
+
+	// 元数据支持（gt-referencing 需要）
+	implementation('org.geotools:gt-metadata:29.0') {
+		transitive = false
+	}
+
+	// 开放GIS接口（gt-referencing 需要）
+	implementation('org.geotools:gt-opengis:29.0') {
+		transitive = false
+	}
+
+	// 单位转换（gt-referencing 需要）
+	implementation 'javax.measure:unit-api:2.1.3'
+	implementation 'tech.units:indriya:2.1.3'
+
+	// ========== Hibernate Spatial + PostGIS ==========
+	implementation 'org.hibernate:hibernate-spatial:6.4.0.Final'
+	implementation 'net.postgis:postgis-jdbc:2021.1.0'
+
+	// ========== 工具库 ==========
+	implementation 'org.apache.commons:commons-lang3:3.14.0'
+	implementation 'cn.hutool:hutool-all:5.8.23'
+	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0'
 }
 
 tasks.named('test') {
-    useJUnitPlatform()
+	useJUnitPlatform()
 }
