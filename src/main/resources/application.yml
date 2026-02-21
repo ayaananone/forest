@@ -1,0 +1,41 @@
+spring:
+  application:
+    name: forest-gis-platform
+
+  datasource:
+    url: jdbc:postgresql://localhost:6666/forest
+    username: postgres
+    password: 9876
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+
+# Geoserver配置（自定义配置，不需要 spring 前缀）
+geoserver:
+  url: http://localhost:8080/geoserver
+  workspace: forest
+  username: admin
+  password: geoserver
+
+# 服务器配置
+server:
+  port: 8081
+  servlet:
+    context-path: /
+
+# 日志配置
+logging:
+  level:
+    com.forest.gis: DEBUG
+    org.hibernate.SQL: DEBUG
