@@ -1,0 +1,206 @@
+/**
+ * Element Plus 主题变量定制
+ * 智慧林场 - 绿色主题
+ */
+
+// ==================== 主色调 ====================
+
+// 品牌色 - 林业绿
+$--color-primary: #2E7D32;
+$--color-primary-light-1: #388E3C;
+$--color-primary-light-2: #43A047;
+$--color-primary-light-3: #4CAF50;
+$--color-primary-light-4: #66BB6A;
+$--color-primary-light-5: #81C784;
+$--color-primary-light-6: #A5D6A7;
+$--color-primary-light-7: #C8E6C9;
+$--color-primary-light-8: #E8F5E9;
+$--color-primary-light-9: #F1F8E9;
+
+// 深色变体
+$--color-primary-dark-1: #1B5E20;
+$--color-primary-dark-2: #2E7D32;
+
+// ==================== 辅助色 ====================
+
+// 成功色
+$--color-success: #4CAF50;
+$--color-success-light: #E8F5E9;
+$--color-success-lighter: #F1F8E9;
+
+// 警告色
+$--color-warning: #FF9800;
+$--color-warning-light: #FFF3E0;
+$--color-warning-lighter: #FFF8E1;
+
+// 危险色
+$--color-danger: #D32F2F;
+$--color-danger-light: #FFEBEE;
+$--color-danger-lighter: #FCE4EC;
+
+// 信息色
+$--color-info: #1976D2;
+$--color-info-light: #E3F2FD;
+$--color-info-lighter: #E8F5E9;
+
+// ==================== 中性色 ====================
+
+// 文字颜色
+$--color-text-primary: #212121;
+$--color-text-regular: #424242;
+$--color-text-secondary: #757575;
+$--color-text-placeholder: #9E9E9E;
+
+// 边框颜色
+$--border-color-base: #E0E0E0;
+$--border-color-light: #EEEEEE;
+$--border-color-lighter: #F5F5F5;
+$--border-color-extra-light: #FAFAFA;
+
+// 背景颜色
+$--background-color-base: #F5F5F5;
+$--background-color-light: #FAFAFA;
+
+// ==================== 地图相关颜色 ====================
+
+// 林分边界
+$--map-stand-border: #2E7D32;
+$--map-stand-fill: rgba(46, 125, 50, 0.1);
+
+// 高亮样式
+$--map-highlight-border: #FF5722;
+$--map-highlight-fill: rgba(255, 87, 34, 0.1);
+
+// 选中样式
+$--map-selected-border: #1976D2;
+$--map-selected-fill: rgba(25, 118, 210, 0.15);
+
+// 查询范围圆
+$--map-radius-circle: #388E3C;
+
+// ==================== 图表颜色 ====================
+
+// 图表主题色
+$--chart-colors: (
+  #2E7D32,  // 深绿
+  #388E3C,  // 绿
+  #43A047,  // 浅绿
+  #66BB6A,  // 更浅绿
+  #D32F2F,  // 红（枫香）
+  #795548,  // 棕（麻栎）
+  #00796B,  // 青（香樟）
+  #689F38,  // 黄绿（毛竹）
+  #757575,  // 灰（杂阔）
+  #1976D2,  // 蓝
+  #F57C00,  // 橙
+  #7B1FA2   // 紫
+);
+
+// ==================== 字体配置 ====================
+
+// 字体家族
+$--font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB',
+  'Microsoft YaHei', '微软雅黑', Arial, sans-serif;
+
+// 字体大小
+$--font-size-extra-large: 20px;
+$--font-size-large: 18px;
+$--font-size-medium: 16px;
+$--font-size-base: 14px;
+$--font-size-small: 13px;
+$--font-size-extra-small: 12px;
+
+// 行高
+$--font-line-height-primary: 24px;
+$--font-line-height-secondary: 20px;
+
+// 字重
+$--font-weight-primary: 500;
+$--font-weight-secondary: 400;
+
+// ==================== 尺寸配置 ====================
+
+// 边框圆角
+$--border-radius-base: 4px;
+$--border-radius-small: 2px;
+$--border-radius-round: 20px;
+$--border-radius-circle: 100%;
+
+// 间距
+$--spacing-base: 8px;
+$--spacing-small: 4px;
+$--spacing-large: 16px;
+$--spacing-extra-large: 24px;
+
+// 组件尺寸
+$--component-size-large: 40px;
+$--component-size-default: 32px;
+$--component-size-small: 24px;
+
+// ==================== 阴影配置 ====================
+
+$--box-shadow-base: 0 2px 4px rgba(0, 0, 0, 0.12), 0 0 6px rgba(0, 0, 0, 0.04);
+$--box-shadow-light: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+$--box-shadow-dark: 0 4px 12px rgba(0, 0, 0, 0.15);
+
+// ==================== 侧边栏配置 ====================
+
+$--sidebar-width: 320px;
+$--sidebar-collapsed-width: 64px;
+$--sidebar-background: #FFFFFF;
+$--sidebar-border: 1px solid $--border-color-light;
+
+// ==================== 地图面板配置 ====================
+
+$--map-panel-width: 280px;
+$--map-panel-background: rgba(255, 255, 255, 0.95);
+$--map-panel-border-radius: 8px;
+$--map-panel-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+
+// ==================== 弹窗配置 ====================
+
+$--popup-width: 320px;
+$--popup-min-width: 280px;
+$--popup-max-width: 400px;
+$--popup-background: #FFFFFF;
+$--popup-border-radius: 8px;
+$--popup-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+
+// ==================== 动画配置 ====================
+
+$--transition-duration: 0.3s;
+$--transition-duration-fast: 0.2s;
+$--transition-duration-slow: 0.4s;
+
+$--transition-function: cubic-bezier(0.645, 0.045, 0.355, 1);
+$--transition-function-ease-in-out: cubic-bezier(0.645, 0.045, 0.355, 1);
+$--transition-function-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+
+// ==================== z-index 层级 ====================
+
+$--index-normal: 1;
+$--index-top: 100;
+$--index-popper: 200;
+$--index-popup: 1000;
+$--index-map-control: 100;
+$--index-map-overlay: 200;
+$--index-loading: 2000;
+$--index-message: 3000;
+
+// ==================== 响应式断点 ====================
+
+$--breakpoint-xs: 480px;
+$--breakpoint-sm: 768px;
+$--breakpoint-md: 992px;
+$--breakpoint-lg: 1200px;
+$--breakpoint-xl: 1920px;
+
+// ==================== 导出变量 ====================
+
+:export {
+  primaryColor: $--color-primary;
+  successColor: $--color-success;
+  warningColor: $--color-warning;
+  dangerColor: $--color-danger;
+  infoColor: $--color-info;
+}
