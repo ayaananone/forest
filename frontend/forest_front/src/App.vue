@@ -50,7 +50,7 @@
       </div>
 
       <el-footer class="app-footer" height="30px">
-        <span>© 2024 智慧林场系统 | 数据更新时间: {{ updateTime }}</span>
+        <span>© 2026 智慧林场系统 | 数据更新时间: {{ updateTime }}</span>
         <span class="footer-right">Node: v18.12.0 | Vue: v3.3.0</span>
       </el-footer>
     </div>

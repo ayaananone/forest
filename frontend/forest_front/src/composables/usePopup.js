@@ -1,7 +1,7 @@
 /**
  * 弹窗管理组合式函数
  */
-import { ref, nextTick } from 'vue'
+import { ref} from 'vue'
 import { Overlay } from 'ol'
 import { fromLonLat } from 'ol/proj'
 import { SPECIES_COLORS } from '@/config'
@@ -14,17 +14,25 @@ export function usePopup(map) {
     const popupContent = ref(null)
     const popupPosition = ref(null)
     const popupVisible = ref(false)
-    const popupType = ref('detail') // 'detail', 'list', 'loading', 'error', 'radius'
+    const popupType = ref('detail')
 
     // ==================== 初始化 ====================
 
     const initPopup = () => {
-        if (!map.value) return
+        if (!map.value) {
+            console.warn('Map not available for popup init')
+            return
+        }
 
-        nextTick(() => {
+        // 使用 setTimeout 确保 DOM 已渲染
+        setTimeout(() => {
             const popupElement = document.getElementById('popup')
+            console.log('Init popup element:', popupElement) // 调试
+            
             if (!popupElement) {
-                console.warn('未找到弹窗元素 #popup')
+                console.warn('未找到弹窗元素 #popup，将在 500ms 后重试')
+                // 重试
+                setTimeout(initPopup, 500)
                 return
             }
 
@@ -41,25 +49,43 @@ export function usePopup(map) {
             })
 
             map.value.addOverlay(popupOverlay.value)
-        })
+            console.log('Popup overlay initialized:', popupOverlay.value) // 调试
+        }, 100)
     }
 
     // ==================== 弹窗控制 ====================
 
     const showPopup = (data, coordinate) => {
+        console.log('showPopup called:', data, coordinate) // 调试
+        
         popupContent.value = data
         popupPosition.value = coordinate
         popupType.value = data.type || 'detail'
         popupVisible.value = true
 
+        console.log('popupVisible set to:', popupVisible.value) // 调试
+        console.log('popupOverlay:', popupOverlay.value) // 调试
+
         if (popupOverlay.value) {
             popupOverlay.value.setPosition(coordinate)
+            console.log('Popup position set to:', coordinate)
+        } else {
+            console.error('popupOverlay is null, trying to init again...')
+            // 尝试重新初始化
+            initPopup()
+            // 延迟设置位置
+            setTimeout(() => {
+                if (popupOverlay.value) {
+                    popupOverlay.value.setPosition(coordinate)
+                }
+            }, 300)
         }
 
         currentFeature.value = data
     }
 
     const closePopup = () => {
+        console.log('closePopup called') // 调试
         popupVisible.value = false
         if (popupOverlay.value) {
             popupOverlay.value.setPosition(undefined)
@@ -85,7 +111,6 @@ export function usePopup(map) {
         const totalVolume = stands.reduce((sum, s) => sum + (s.volumePerHa || 0) * (s.area || 0), 0)
         const totalArea = stands.reduce((sum, s) => sum + (s.area || 0), 0)
 
-        // 计算每个林分的距离
         const standsWithDistance = stands.map(stand => ({
             ...stand,
             distance: Math.round(calculateDistance(lon, lat, stand.centerLon, stand.centerLat))

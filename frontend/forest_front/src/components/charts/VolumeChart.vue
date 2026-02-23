@@ -42,7 +42,6 @@ const rangeLabels = ['<50', '50-100', '100-150', '150-200', '>200']
 const stats = computed(() => {
   const ranges = [0, 0, 0, 0, 0]
   
-  // 🔴 关键：使用 toRaw 解除响应式
   const rawData = toRaw(props.data)
   if (!Array.isArray(rawData)) return ranges
   

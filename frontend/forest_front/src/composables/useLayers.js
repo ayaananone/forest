@@ -442,9 +442,18 @@ export function useLayers(map) {
         // 先尝试从标记图层获取
         const markerLayer = getLayerByName('stands_markers')
         const markers = markerLayer?.getSource().getFeatures() || []
-        const marker = markers.find(f => f.get('id') === standId || f.get('zone_id') === standId)
+        
+        console.log('Looking for standId:', standId, 'in', markers.length, 'markers') // 调试
+        
+        // 尝试多种 ID 字段匹配
+        const marker = markers.find(f => {
+            const fid = f.get('id') || f.get('zone_id') || f.get('stand_id') || f.getId()
+            console.log('Checking marker:', fid) // 调试
+            return String(fid) === String(standId)
+        })
         
         if (marker) {
+            console.log('Found marker:', marker.getProperties()) // 调试
             const geom = marker.getGeometry()
             if (map.value && geom) {
                 map.value.getView().fit(geom.getExtent(), {
@@ -477,6 +486,8 @@ export function useLayers(map) {
             
             return
         }
+        
+        console.warn('Marker not found for standId:', standId) // 调试
         
         // 回退到 WFS 查询
         try {
@@ -534,16 +545,19 @@ export function useLayers(map) {
 
         highlightSource.value.addFeature(feature)
 
+        // 5秒后自动移除圆圈
         setTimeout(() => {
-            highlightSource.value.removeFeature(feature)
+            if (highlightSource.value) {
+                highlightSource.value.removeFeature(feature)
+            }
         }, 5000)
     }
 
     // ==================== CQL筛选 ====================
 
-    const applyCQLFilter = (cqlFilter) => {
-        // 应用 WMS 筛选
-        const wmsLayer = getLayerByName('stands')
+    const applyCQLFilter = (cqlFilter, filterObj = null) => {
+    // 应用到 WMS 图层
+    const wmsLayer = getLayerByName('stands')
         if (wmsLayer && !wmsError.value) {
             const source = wmsLayer.getSource()
             const params = source.getParams()
@@ -555,50 +569,47 @@ export function useLayers(map) {
             }
             
             source.updateParams(params)
+            console.log('WMS CQL_FILTER 已更新:', cqlFilter || '清除')
         }
         
-        currentFilter.value = cqlFilter || ''
-        
-        // 同时筛选标记图层
-        filterMarkers(cqlFilter)
+        // 应用到矢量标记图层（客户端筛选）
+        filterMarkers(filterObj || { species: null, origin: null, minVolume: null })
     }
 
-    const filterMarkers = (cqlFilter) => {
+    // 矢量标记筛选（修复：支持多条件组合）
+    const filterMarkers = (filters) => {
         const markerLayer = getLayerByName('stands_markers')
         if (!markerLayer) return
 
         const features = markerLayer.getSource().getFeatures()
         
-        if (!cqlFilter) {
-            // 显示所有
+        // 如果没有筛选条件，显示全部
+        const hasFilter = filters.species || filters.origin || (filters.minVolume > 0)
+        if (!hasFilter) {
             features.forEach(feature => feature.setStyle(undefined))
             return
         }
 
-        // 解析 CQL 条件
+        // 逐个评估条件
         features.forEach(feature => {
             let visible = true
             
-            if (cqlFilter.includes('dominant_species=')) {
-                const match = cqlFilter.match(/dominant_species='([^']+)'/)
-                if (match) {
-                    visible = feature.get('dominant_species') === match[1]
-                }
-            }
-            if (cqlFilter.includes('origin=')) {
-                const match = cqlFilter.match(/origin='([^']+)'/)
-                if (match) {
-                    visible = feature.get('origin') === match[1]
-                }
-            }
-            if (cqlFilter.includes('volume_per_ha>=')) {
-                const match = cqlFilter.match(/volume_per_ha>=([\d.]+)/)
-                if (match) {
-                    visible = feature.get('volume_per_ha') >= parseFloat(match[1])
-                }
+            // 树种条件
+            if (filters.species) {
+                visible = visible && feature.get('dominant_species') === filters.species
             }
             
-            // 设置可见性（通过样式）
+            // 起源条件
+            if (filters.origin) {
+                visible = visible && feature.get('origin') === filters.origin
+            }
+            
+            // 蓄积量条件
+            if (filters.minVolume > 0) {
+                visible = visible && (feature.get('volume_per_ha') || 0) >= filters.minVolume
+            }
+            
+            // 应用样式（可见/不可见）
             feature.setStyle(visible ? undefined : new Style({}))
         })
     }
