@@ -1,13 +1,12 @@
 /**
- * 图层管理组合式函数
+ * 图层管理组合式函数 - 修复 WMS 加载问题
  */
 import { ref } from 'vue'
 import { Tile as TileLayer, Vector as VectorLayer, Heatmap as HeatmapLayer } from 'ol/layer'
 import { XYZ, TileWMS, Vector as VectorSource } from 'ol/source'
 import { GeoJSON } from 'ol/format'
 import { fromLonLat } from 'ol/proj'
-import { bbox as bboxStrategy } from 'ol/loadingstrategy'
-import { Style, Stroke, Fill, Text } from 'ol/style'
+import { Style, Stroke, Fill, Text, Circle as CircleStyle } from 'ol/style'
 import Feature from 'ol/Feature'
 import Point from 'ol/geom/Point'
 import Circle from 'ol/geom/Circle'
@@ -17,33 +16,29 @@ import { hexToRgba } from '@/utils/formatters'
 
 export function useLayers(map) {
     const layerInstances = ref({})
-    const wfsSource = ref(null)
     const currentFilter = ref('')
     const highlightSource = ref(null)
+    const standsVisible = ref(true)
+    const wmsError = ref(false) // 追踪 WMS 是否加载失败
 
     // ==================== 图层创建 ====================
     
-    const createBaseLayer = () => {
+    const createBaseLayer = (source) => {
         return new TileLayer({
-            source: new XYZ({
-                // 使用国内 OSM 镜像
-                url: 'https://osm.open.cn/{z}/{x}/{y}.png',
-                attributions: '© OpenStreetMap contributors',
-                crossOrigin: 'anonymous',
-                maxZoom: 19
-            }),
+            source: source,
             name: 'base',
             visible: true,
             zIndex: 1
         })
     }
 
-
     const createSatelliteLayer = () => {
         return new TileLayer({
             source: new XYZ({
-                url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-                attributions: '© Esri'
+                url: 'https://webst01.is.autonavi.com/appmaptile?style=6&x={x}&y={y}&z={z}',
+                attributions: '&copy; 高德地图',
+                maxZoom: 18,
+                crossOrigin: 'anonymous'
             }),
             name: 'satellite',
             visible: false,
@@ -51,21 +46,57 @@ export function useLayers(map) {
         })
     }
 
-
+    /**
+     * 创建林分 WMS 图层 - 添加详细错误处理
+     */
     const createStandsWMSLayer = () => {
+        // 检查配置
+        if (!CONFIG.GEOSERVER_URL || CONFIG.GEOSERVER_URL === 'http://localhost:8080/geoserver') {
+            console.warn('⚠️ GeoServer URL 未配置或使用的是默认值，WMS 可能无法加载')
+        }
+
+        const source = new TileWMS({
+            url: `${CONFIG.GEOSERVER_URL}/wms`,
+            params: {
+                'LAYERS': 'forest:forest_stand',
+                'TILED': true,
+                'FORMAT': 'image/png',
+                'TRANSPARENT': true,
+                'VERSION': '1.1.1',
+                'SRS': 'EPSG:3857'
+            },
+            serverType: 'geoserver',
+            crossOrigin: 'anonymous',
+            // 添加超时设置
+            timeout: 10000
+        })
+
+        // 详细的错误处理
+        source.on('tileloaderror', (event) => {
+            wmsError.value = true
+            console.error('❌ WMS 瓦片加载失败:', {
+                url: event.tile.src_,
+                layer: 'forest:forest_stand',
+                message: '请检查 GeoServer 是否启动，或图层名称是否正确'
+            })
+            
+            // 显示用户友好的提示
+            if (map.value) {
+                console.info('💡 提示：将使用备选矢量标记图层显示林分')
+            }
+        })
+
+        source.on('tileloadstart', () => {
+            // console.log('WMS 瓦片开始加载...')
+        })
+
+        source.on('tileloadend', () => {
+            wmsError.value = false
+            // console.log('✓ WMS 瓦片加载成功')
+        })
+
         return new TileLayer({
-            source: new TileWMS({
-                url: `${CONFIG.GEOSERVER_URL}/wms`,
-                params: {
-                    'LAYERS': 'forest:forest_stand',
-                    'TILED': true,
-                    'FORMAT': 'image/png',
-                    'TRANSPARENT': true,
-                    'VERSION': '1.1.1'
-                },
-                serverType: 'geoserver',
-                crossOrigin: 'anonymous'
-            }),
+            source: source,
             name: 'stands',
             visible: true,
             opacity: 0.9,
@@ -73,23 +104,77 @@ export function useLayers(map) {
         })
     }
 
-    const createStandsWFSLayer = () => {
-        wfsSource.value = new VectorSource({
-            format: new GeoJSON(),
-            url: (extent) => {
-                return `${CONFIG.GEOSERVER_URL}/wfs?service=WFS&` +
-                    `version=1.1.0&request=GetFeature&typename=forest:forest_stand&` +
-                    `outputFormat=application/json&srsname=EPSG:3857&` +
-                    `bbox=${extent.join(',')},EPSG:3857`
+    /**
+     * 创建林分矢量标记图层（WMS 失败时的备选）
+     */
+    const createStandsMarkerLayer = () => {
+        const source = new VectorSource()
+        
+        return new VectorLayer({
+            source: source,
+            name: 'stands_markers',
+            visible: true,
+            style: (feature) => {
+                const volume = feature.get('volume_per_ha') || 0
+                const species = feature.get('dominant_species') || '未知'
+                const color = SPECIES_COLORS[species] || '#2E7D32'
+                
+                // 根据蓄积量调整大小
+                const radius = Math.max(8, Math.min(20, volume / 15))
+                
+                return new Style({
+                    image: new CircleStyle({
+                        radius: radius,
+                        fill: new Fill({
+                            color: hexToRgba(color, 0.8)
+                        }),
+                        stroke: new Stroke({
+                            color: '#fff',
+                            width: 2
+                        })
+                    }),
+                    text: new Text({
+                        text: feature.get('stand_name') || feature.get('xiao_ban_code') || '',
+                        font: 'bold 11px sans-serif',
+                        fill: new Fill({ color: '#000' }),
+                        stroke: new Stroke({
+                            color: '#fff',
+                            width: 3
+                        }),
+                        offsetY: -radius - 8
+                    })
+                })
             },
-            strategy: bboxStrategy
+            zIndex: 12
+        })
+    }
+
+    /**
+     * 创建林分边界矢量图层（用于高亮和详细信息）
+     */
+    const createStandsVectorLayer = () => {
+        const source = new VectorSource({
+            format: new GeoJSON()
         })
 
         return new VectorLayer({
-            source: wfsSource.value,
-            name: 'stands_wfs',
-            visible: false,
-            style: standsVectorStyle,
+            source: source,
+            name: 'stands_vector',
+            visible: false, // 默认隐藏，用于高亮
+            style: (feature) => {
+                const species = feature.get('dominant_species') || '未知'
+                const color = SPECIES_COLORS[species] || '#2E7D32'
+                
+                return new Style({
+                    fill: new Fill({
+                        color: hexToRgba(color, 0.4)
+                    }),
+                    stroke: new Stroke({
+                        color: color,
+                        width: 2
+                    })
+                })
+            },
             zIndex: 11
         })
     }
@@ -122,51 +207,25 @@ export function useLayers(map) {
                     width: 3
                 }),
                 fill: new Fill({
-                    color: 'rgba(255, 87, 34, 0.1)'
+                    color: 'rgba(255, 87, 34, 0.2)'
                 })
             }),
             zIndex: 20
         })
     }
 
-    // WFS矢量图层样式
-    const standsVectorStyle = (feature) => {
-        const species = feature.get('dominant_species') || '未知'
-        const color = SPECIES_COLORS[species] || '#757575'
-        const volume = feature.get('volume_per_ha') || 0
-        const opacity = Math.max(0.4, Math.min(0.9, volume / 300))
-
-        return new Style({
-            fill: new Fill({
-                color: hexToRgba(color, opacity)
-            }),
-            stroke: new Stroke({
-                color: color,
-                width: 2
-            }),
-            text: new Text({
-                text: feature.get('stand_no') || '',
-                font: '12px sans-serif',
-                fill: new Fill({ color: '#fff' }),
-                stroke: new Stroke({
-                    color: '#000',
-                    width: 3
-                })
-            })
-        })
-    }
-
     // ==================== 图层控制 ====================
 
-    const initializeLayers = () => {
+    const initializeLayers = (baseSource) => {
         if (!map.value) return
 
         const layers = [
-            createBaseLayer(),
+            createBaseLayer(baseSource),
             createSatelliteLayer(),
             createHeatmapLayer(),
-            createStandsWMSLayer(),
-            createStandsWFSLayer(),
+            createStandsWMSLayer(),      // WMS 图层（可能失败）
+            createStandsVectorLayer(),
+            createStandsMarkerLayer(),    // 备选标记图层
             createHighlightLayer()
         ]
 
@@ -174,13 +233,69 @@ export function useLayers(map) {
             map.value.addLayer(layer)
             layerInstances.value[layer.get('name')] = layer
         })
+
+        // 立即加载标记数据（作为 WMS 的备选）
+        loadStandsMarkers()
+        
+        // 测试 WMS 是否可用
+        testWMSConnection()
+    }
+
+    /**
+     * 测试 WMS 连接
+     */
+    const testWMSConnection = async () => {
+        try {
+            const testUrl = `${CONFIG.GEOSERVER_URL}/wms?service=WMS&version=1.1.1&request=GetCapabilities`
+            await fetch(testUrl, { 
+                method: 'HEAD',
+                mode: 'no-cors' // 先尝试无跨域模式
+            })
+            console.log('✓ GeoServer WMS 服务可访问')
+        } catch (error) {
+            console.warn('⚠️ GeoServer WMS 服务可能未启动或不可访问:', error.message)
+            console.info('💡 系统将使用矢量标记图层作为备选方案')
+            
+            // 如果 WMS 不可用，确保标记图层可见
+            const markerLayer = getLayerByName('stands_markers')
+            if (markerLayer) {
+                markerLayer.setVisible(true)
+            }
+        }
     }
 
     const getLayerByName = (name) => {
         return layerInstances.value[name] || null
     }
 
+    /**
+     * 切换图层可见性
+     */
     const toggleLayer = (layerName, visible) => {
+        if (layerName === 'stands') {
+            const wmsLayer = getLayerByName('stands')
+            const markerLayer = getLayerByName('stands_markers')
+            const vectorLayer = getLayerByName('stands_vector')
+            
+            const newVisible = visible !== undefined ? visible : !(wmsLayer?.getVisible() ?? true)
+            
+            standsVisible.value = newVisible
+            
+            // 如果 WMS 失败，优先使用标记图层
+            if (wmsError.value && markerLayer) {
+                markerLayer.setVisible(newVisible)
+                if (wmsLayer) wmsLayer.setVisible(false) // WMS 失败时隐藏
+            } else {
+                if (wmsLayer) wmsLayer.setVisible(newVisible)
+                if (markerLayer) markerLayer.setVisible(newVisible)
+            }
+            
+            if (vectorLayer) vectorLayer.setVisible(false) // 矢量层默认隐藏
+            
+            console.log(`林分图层切换: ${newVisible ? '显示' : '隐藏'}${wmsError.value ? ' (使用备选标记)' : ''}`)
+            return newVisible
+        }
+        
         const layer = getLayerByName(layerName)
         if (!layer) {
             console.warn(`未找到图层: ${layerName}`)
@@ -190,7 +305,6 @@ export function useLayers(map) {
         const newVisible = visible !== undefined ? visible : !layer.getVisible()
         layer.setVisible(newVisible)
 
-        // 如果开启热力图，刷新数据
         if (layerName === 'heatmap' && newVisible) {
             refreshHeatmapData()
         }
@@ -199,18 +313,89 @@ export function useLayers(map) {
     }
 
     const setLayerOpacity = (layerName, opacity) => {
-        const layer = getLayerByName(layerName)
-        if (layer) {
-            layer.setOpacity(opacity)
+        if (layerName === 'stands') {
+            const wmsLayer = getLayerByName('stands')
+            const markerLayer = getLayerByName('stands_markers')
+            if (wmsLayer && !wmsError.value) wmsLayer.setOpacity(opacity)
+            if (markerLayer) markerLayer.setOpacity(opacity)
+        } else {
+            const layer = getLayerByName(layerName)
+            if (layer) {
+                layer.setOpacity(opacity)
+            }
         }
     }
 
-    const getWMSLayerSource = () => {
-        const layer = getLayerByName('stands')
-        return layer ? layer.getSource() : null
-    }
-
     // ==================== 数据加载 ====================
+
+    /**
+     * 从 API 加载林分标记数据
+     */
+    const loadStandsMarkers = async () => {
+        const markerLayer = getLayerByName('stands_markers')
+        if (!markerLayer) {
+            console.warn('标记图层未找到')
+            return
+        }
+
+        try {
+            console.log('正在加载林分标记数据...')
+            
+            // 使用绝对路径或配置的基础 URL
+            const apiUrl = CONFIG.API_BASE ? `${CONFIG.API_BASE}/stands` : '/api/stands'
+            
+            const response = await fetch(apiUrl, {
+                headers: {
+                    'Accept': 'application/json'
+                }
+            })
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+            }
+            
+            const stands = await response.json()
+            
+            if (!Array.isArray(stands) || stands.length === 0) {
+                console.warn('返回的林分数据为空')
+                return
+            }
+
+            const features = stands.map(stand => {
+                // 检查坐标是否存在
+                if (!stand.centerLon || !stand.centerLat) {
+                    console.warn(`林分 ${stand.id} 缺少坐标`)
+                    return null
+                }
+                
+                return new Feature({
+                    geometry: new Point(fromLonLat([stand.centerLon, stand.centerLat])),
+                    id: stand.id,
+                    stand_name: stand.standName || stand.stand_name,
+                    xiao_ban_code: stand.xiaoBanCode || stand.xiao_ban_code,
+                    dominant_species: stand.dominantSpecies || stand.dominant_species,
+                    volume_per_ha: stand.volumePerHa || stand.volume_per_ha,
+                    area: stand.area,
+                    origin: stand.origin,
+                    ...stand
+                })
+            }).filter(f => f !== null)
+
+            markerLayer.getSource().clear()
+            markerLayer.getSource().addFeatures(features)
+            
+            console.log(`✓ 加载了 ${features.length} 个林分标记`)
+            
+            // 如果 WMS 失败，确保标记图层可见
+            if (wmsError.value) {
+                markerLayer.setVisible(true)
+            }
+            
+        } catch (error) {
+            console.error('❌ 加载林分标记失败:', error.message)
+            console.info('💡 请检查：1. API 服务是否启动 2. 网络连接是否正常')
+        }
+    }
 
     const refreshHeatmapData = async () => {
         const layer = getLayerByName('heatmap')
@@ -220,7 +405,8 @@ export function useLayers(map) {
         if (source.getFeatures().length > 0) return
 
         try {
-            const response = await fetch(`${CONFIG.API_BASE}/stands`)
+            const apiUrl = CONFIG.API_BASE ? `${CONFIG.API_BASE}/stands` : '/api/stands'
+            const response = await fetch(apiUrl)
             const stands = await response.json()
             loadHeatmapFeatures(stands)
         } catch (error) {
@@ -253,10 +439,50 @@ export function useLayers(map) {
 
         highlightSource.value.clear()
 
+        // 先尝试从标记图层获取
+        const markerLayer = getLayerByName('stands_markers')
+        const markers = markerLayer?.getSource().getFeatures() || []
+        const marker = markers.find(f => f.get('id') === standId || f.get('zone_id') === standId)
+        
+        if (marker) {
+            const geom = marker.getGeometry()
+            if (map.value && geom) {
+                map.value.getView().fit(geom.getExtent(), {
+                    padding: [100, 100, 100, 100],
+                    duration: 500,
+                    maxZoom: 16
+                })
+            }
+            
+            // 添加脉冲高亮效果
+            const highlightFeature = marker.clone()
+            highlightFeature.setStyle(new Style({
+                image: new CircleStyle({
+                    radius: 25,
+                    fill: new Fill({
+                        color: 'rgba(255, 87, 34, 0.2)'
+                    }),
+                    stroke: new Stroke({
+                        color: '#FF5722',
+                        width: 4
+                    })
+                })
+            }))
+            highlightSource.value.addFeature(highlightFeature)
+            
+            // 3秒后移除高亮
+            setTimeout(() => {
+                highlightSource.value.removeFeature(highlightFeature)
+            }, 3000)
+            
+            return
+        }
+        
+        // 回退到 WFS 查询
         try {
             const url = `${CONFIG.GEOSERVER_URL}/wfs?service=WFS&version=1.1.0&request=GetFeature&` +
                 `typename=forest:forest_stand&outputFormat=application/json&` +
-                `cql_filter=id=${standId}`
+                `cql_filter=zone_id=${standId}`
 
             const response = await fetch(url)
             const geojson = await response.json()
@@ -316,17 +542,65 @@ export function useLayers(map) {
     // ==================== CQL筛选 ====================
 
     const applyCQLFilter = (cqlFilter) => {
-        const source = getWMSLayerSource()
-        if (!source) return
-
-        const params = source.getParams()
-        if (cqlFilter) {
-            params.CQL_FILTER = cqlFilter
-        } else {
-            delete params.CQL_FILTER
+        // 应用 WMS 筛选
+        const wmsLayer = getLayerByName('stands')
+        if (wmsLayer && !wmsError.value) {
+            const source = wmsLayer.getSource()
+            const params = source.getParams()
+            
+            if (cqlFilter) {
+                params.CQL_FILTER = cqlFilter
+            } else {
+                delete params.CQL_FILTER
+            }
+            
+            source.updateParams(params)
         }
-        source.updateParams(params)
+        
         currentFilter.value = cqlFilter || ''
+        
+        // 同时筛选标记图层
+        filterMarkers(cqlFilter)
+    }
+
+    const filterMarkers = (cqlFilter) => {
+        const markerLayer = getLayerByName('stands_markers')
+        if (!markerLayer) return
+
+        const features = markerLayer.getSource().getFeatures()
+        
+        if (!cqlFilter) {
+            // 显示所有
+            features.forEach(feature => feature.setStyle(undefined))
+            return
+        }
+
+        // 解析 CQL 条件
+        features.forEach(feature => {
+            let visible = true
+            
+            if (cqlFilter.includes('dominant_species=')) {
+                const match = cqlFilter.match(/dominant_species='([^']+)'/)
+                if (match) {
+                    visible = feature.get('dominant_species') === match[1]
+                }
+            }
+            if (cqlFilter.includes('origin=')) {
+                const match = cqlFilter.match(/origin='([^']+)'/)
+                if (match) {
+                    visible = feature.get('origin') === match[1]
+                }
+            }
+            if (cqlFilter.includes('volume_per_ha>=')) {
+                const match = cqlFilter.match(/volume_per_ha>=([\d.]+)/)
+                if (match) {
+                    visible = feature.get('volume_per_ha') >= parseFloat(match[1])
+                }
+            }
+            
+            // 设置可见性（通过样式）
+            feature.setStyle(visible ? undefined : new Style({}))
+        })
     }
 
     const filterBySpecies = (species) => {
@@ -364,10 +638,13 @@ export function useLayers(map) {
 
     return {
         layerInstances,
+        standsVisible,
+        wmsError,
         initializeLayers,
         getLayerByName,
         toggleLayer,
         setLayerOpacity,
+        loadStandsMarkers,
         loadHeatmapFeatures,
         highlightStand,
         clearHighlight,
