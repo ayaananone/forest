@@ -18,10 +18,28 @@
       </el-header>
 
       <div class="main-content">
-        <div class="stats-panel">
-          <ChartContainer ref="chartContainerRef" />
+        <!-- 统计信息展开按钮 -->
+        <div 
+          class="sidebar-toggle"
+          :class="{ collapsed: sidebarCollapsed }"
+          @click="sidebarCollapsed = !sidebarCollapsed"
+        >
+          <span class="toggle-text">统计信息</span>
+          <el-icon :size="12">
+            <Arrow-Right v-if="sidebarCollapsed" />
+            <Arrow-Left v-else />
+          </el-icon>
         </div>
-        <div class="map-panel">
+
+        <!-- 统计面板 - 默认折叠，展开后全屏 -->
+        <div class="stats-panel" :class="{ collapsed: sidebarCollapsed }">
+          <div class="panel-inner">
+            <ChartContainer ref="chartContainerRef" />
+          </div>
+        </div>
+        
+        <!-- 地图面板 -->
+        <div class="map-panel" :class="{ expanded: sidebarCollapsed }">
           <MapContainer 
             ref="mapContainerRef"
             @stand-select="handleStandSelect"
@@ -42,7 +60,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElNotification } from 'element-plus'
-import { View, Refresh, User } from '@element-plus/icons-vue'
+import { View, Refresh, User, ArrowLeft, ArrowRight } from '@element-plus/icons-vue'
 import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
 
 import ChartContainer from '@/components/charts/ChartContainer.vue'
@@ -51,6 +69,8 @@ import MapContainer from '@/components/map/MapContainer.vue'
 const chartContainerRef = ref(null)
 const mapContainerRef = ref(null)
 const updateTime = ref(new Date().toLocaleString('zh-CN'))
+// 🔴 默认折叠
+const sidebarCollapsed = ref(true)
 
 const refreshAll = async () => {
   try {
@@ -152,28 +172,88 @@ html, body, #app {
   color: #E8F5E9;
 }
 
-/* 关键：使用 flex 布局确保子元素有尺寸 */
 .main-content {
   flex: 1;
   display: flex;
   overflow: hidden;
-  min-height: 0; /* 重要：防止 flex 子项溢出 */
+  position: relative;
 }
 
+/* 统计信息展开按钮 */
+.sidebar-toggle {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1001;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 16px 8px;
+  background: #2E7D32;
+  color: #fff;
+  cursor: pointer;
+  border-radius: 0 6px 6px 0;
+  box-shadow: 2px 0 8px rgba(0,0,0,0.2);
+  transition: all 0.3s;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  letter-spacing: 2px;
+}
+
+.sidebar-toggle:hover {
+  background: #1B5E20;
+  padding-left: 12px;
+}
+
+.sidebar-toggle.collapsed {
+  left: 0;
+}
+
+.toggle-text {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* 统计面板 - 默认折叠，展开后全屏 */
 .stats-panel {
-  width: 340px;
-  flex-shrink: 0;
-  background-color: #fff;
-  border-right: 1px solid #e4e7ed;
-  overflow-y: auto;
-  padding: 16px;
+  position: fixed;
+  left: 0;
+  top: 60px;
+  bottom: 30px;
+  width: 100%;
+  background: #f5f7fa;
+  z-index: 200;
+  transform: translateX(0);
+  transition: transform 0.3s ease;
+  overflow: hidden;
 }
 
+.stats-panel.collapsed {
+  transform: translateX(-100%);
+}
+
+.panel-inner {
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+/* 地图面板 */
 .map-panel {
   flex: 1;
   position: relative;
-  min-width: 0; /* 重要：防止 flex 子项溢出 */
+  min-width: 0;
   min-height: 0;
+  transition: all 0.3s ease;
+}
+
+.map-panel.expanded {
+  margin-left: 0;
 }
 
 .app-footer {
@@ -191,18 +271,15 @@ html, body, #app {
   color: #81C784;
 }
 
+/* 响应式 */
 @media (max-width: 768px) {
-  .main-content {
-    flex-direction: column;
+  .sidebar-toggle {
+    padding: 12px 6px;
+    font-size: 12px;
   }
   
-  .stats-panel {
-    width: 100%;
-    height: 40%;
-  }
-  
-  .map-panel {
-    height: 60%;
+  .toggle-text {
+    font-size: 12px;
   }
 }
 </style>

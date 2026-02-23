@@ -144,14 +144,14 @@ const filters = ref({
 })
 
 const availableSpecies = ref([
-  '马尾松', '杉木', '湿地松', '枫香', 
-  '麻栎', '香樟', '毛竹', '杂阔'
+  '马尾松', '杉木', '樟树',
+  '枫香', '木荷', '毛竹', '油茶', '未知'
 ])
 
 const layerList = ref([
   { name: 'base', label: '街道地图', visible: true, opacity: 1 },
   { name: 'satellite', label: '卫星影像', visible: false, opacity: 1 },
-  { name: 'stands', label: '林分分布', visible: true, opacity: 0.9 },
+  { name: 'stands', label: '林分分布', visible: true, opacity: 0.9 }, // 默认勾选
   { name: 'heatmap', label: '蓄积热力图', visible: false, opacity: 0.8 }
 ])
 

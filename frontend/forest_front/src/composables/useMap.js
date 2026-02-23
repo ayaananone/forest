@@ -1,5 +1,5 @@
 /**
- * 地图核心组合式函数 - 对应原 map.js
+ * 地图核心组合式函数
  */
 import { ref, onUnmounted, nextTick } from 'vue'
 import { Map, View } from 'ol'
@@ -14,12 +14,11 @@ import { CONFIG } from '@/config'
 import { useLayers } from './useLayers'
 import { usePopup } from './usePopup'
 
-// CartoDB 瓦片源（国内访问稳定）
-const cartoDBSource = new XYZ({
-    url: 'https://{a-d}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
-    attributions: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-    subdomains: 'abcd',
-    maxZoom: 19
+const baseSource = new XYZ({
+    url: 'https://webrd01.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}',
+    attributions: '&copy; 高德地图',
+    maxZoom: 18,
+    crossOrigin: 'anonymous'
 })
 
 export function useMap(targetId, options = {}) {
@@ -62,7 +61,7 @@ export function useMap(targetId, options = {}) {
                 throw new Error(`地图容器 #${targetId} 不存在`)
             }
             
-            let retries = 30
+            let retries = 50
             while (retries > 0) {
                 const rect = container.getBoundingClientRect()
                 if (rect.width > 0 && rect.height > 0) {
@@ -70,6 +69,11 @@ export function useMap(targetId, options = {}) {
                 }
                 await new Promise(resolve => setTimeout(resolve, 100))
                 retries--
+            }
+
+            const finalRect = container.getBoundingClientRect()
+            if (finalRect.width === 0 || finalRect.height === 0) {
+                throw new Error('地图容器尺寸为 0')
             }
 
             view.value = new View({
@@ -94,7 +98,7 @@ export function useMap(targetId, options = {}) {
                     }),
                     new OverviewMap({
                         collapsed: true,
-                        layers: [new TileLayer({ source: cartoDBSource })]
+                        layers: [new TileLayer({ source: baseSource })]
                     })
                 ]),
                 interactions: defaultInteractions().extend([
@@ -102,7 +106,7 @@ export function useMap(targetId, options = {}) {
                 ])
             })
 
-            initializeLayers(cartoDBSource)
+            initializeLayers(baseSource)
             initPopup()
 
             map.value.on('click', handleMapClick)
@@ -110,7 +114,11 @@ export function useMap(targetId, options = {}) {
 
             setTimeout(() => {
                 map.value?.updateSize()
-            }, 100)
+            }, 200)
+
+            window.addEventListener('resize', () => {
+                setTimeout(() => map.value?.updateSize(), 100)
+            })
 
             isInitialized.value = true
             console.log('✓ 地图初始化完成')
@@ -143,7 +151,7 @@ export function useMap(targetId, options = {}) {
         map.value.getTargetElement().style.cursor = hit ? 'pointer' : ''
     }
 
-    // ==================== WFS查询（支持JSON和XML响应） ====================
+    // ==================== WFS查询 ====================
 
     const queryWFSFeature = async (coordinate) => {
         const layer = getLayerByName('stands')
@@ -158,17 +166,18 @@ export function useMap(targetId, options = {}) {
             const resolution = view.value.getResolution()
             const buffer = 50 * resolution
             
-            // 使用 BBOX 查询（兼容性更好，替代 DWITHIN）
             const minX = coordinate[0] - buffer
             const minY = coordinate[1] - buffer
             const maxX = coordinate[0] + buffer
             const maxY = coordinate[1] + buffer
             const bbox = `${minX},${minY},${maxX},${maxY}`
             
+            const propertyName = 'zone_id,xiao_ban_code,stand_name,dominant_species,volume_per_ha,area_ha,origin,stand_age,canopy_density,center_lon,center_lat'
+            
             const url = `${CONFIG.GEOSERVER_URL}/wfs?service=WFS&version=1.1.0&request=GetFeature&` +
                 `typename=forest:forest_stand&outputFormat=application/json&` +
                 `srsname=EPSG:3857&bbox=${bbox},EPSG:3857&` +
-                `propertyName=id,stand_name,stand_no,dominant_species,volume_per_ha,area,origin,age,density`
+                `propertyName=${propertyName}`
 
             console.log('WFS 查询 URL:', url)
 
@@ -183,33 +192,25 @@ export function useMap(targetId, options = {}) {
 
             let features = []
 
-            // 处理 JSON 响应
             if (contentType.includes('application/json')) {
                 const data = await response.json()
                 features = data.features || []
-            } 
-            // 处理 XML/GML 响应
-            else if (contentType.includes('xml') || contentType.includes('text/xml')) {
+            } else if (contentType.includes('xml') || contentType.includes('text/xml')) {
                 const text = await response.text()
-                console.warn('收到 XML 响应，尝试解析:', text.substring(0, 500))
+                console.warn('收到 XML 响应:', text.substring(0, 500))
                 features = parseGMLFeatures(text)
-            }
-            // 尝试解析为 JSON（有些服务器不设置正确的 content-type）
-            else {
+            } else {
                 const text = await response.text()
                 try {
                     const data = JSON.parse(text)
                     features = data.features || []
                 } catch {
-                    // 尝试作为 XML 解析
                     features = parseGMLFeatures(text)
                 }
             }
 
-            // 过滤出实际包含几何体的要素（BBOX 可能返回范围外的）
             features = features.filter(f => {
                 if (!f.geometry) return false
-                // 简单距离检查
                 const geom = f.geometry
                 if (geom.type === 'Point') {
                     const dx = geom.coordinates[0] - coordinate[0]
@@ -236,19 +237,16 @@ export function useMap(targetId, options = {}) {
         }
     }
 
-    // 解析 GML 格式的要素
     const parseGMLFeatures = (xmlString) => {
         const parser = new DOMParser()
         const xmlDoc = parser.parseFromString(xmlString, 'text/xml')
         
-        // 检查解析错误
         const parseError = xmlDoc.getElementsByTagName('parsererror')
         if (parseError.length > 0) {
             console.error('XML 解析错误:', parseError[0].textContent)
             return []
         }
         
-        // 检查 ServiceException
         const exceptions = xmlDoc.getElementsByTagName('ServiceException')
         if (exceptions.length > 0) {
             console.error('GeoServer 错误:', exceptions[0].textContent)
@@ -256,8 +254,6 @@ export function useMap(targetId, options = {}) {
         }
         
         const features = []
-        
-        // 支持多种 GML 格式
         const featureNodes = xmlDoc.getElementsByTagName('gml:featureMember')
         
         for (let i = 0; i < featureNodes.length; i++) {
@@ -267,11 +263,9 @@ export function useMap(targetId, options = {}) {
             const properties = {}
             let geometry = null
             
-            // 提取所有属性
             for (let child of node.children) {
                 const tagName = child.tagName.split(':').pop()
                 
-                // 提取几何体
                 if (tagName.toLowerCase().includes('geom') || 
                     tagName === 'the_geom' ||
                     tagName === 'geometry') {
@@ -279,7 +273,6 @@ export function useMap(targetId, options = {}) {
                     continue
                 }
                 
-                // 提取普通属性
                 if (child.children.length === 0) {
                     properties[tagName] = child.textContent
                 }
@@ -298,9 +291,7 @@ export function useMap(targetId, options = {}) {
         return features
     }
 
-    // 提取 GML 几何体（简化版）
     const extractGeometry = (geomNode) => {
-        // 查找 Point
         const point = geomNode.getElementsByTagName('gml:Point')[0]
         if (point) {
             const pos = point.getElementsByTagName('gml:pos')[0] || 
@@ -314,10 +305,9 @@ export function useMap(targetId, options = {}) {
             }
         }
         
-        // 查找 Polygon（简化处理）
         const polygon = geomNode.getElementsByTagName('gml:Polygon')[0]
         if (polygon) {
-            return { type: 'Polygon' } // 简化返回
+            return { type: 'Polygon' }
         }
         
         return null
@@ -325,16 +315,18 @@ export function useMap(targetId, options = {}) {
 
     const showWMSPopup = (feature, coordinate) => {
         const props = feature.properties || {}
+        
         const data = {
             type: 'detail',
-            id: props.id || feature.id,
+            id: props.zone_id,
             name: props.stand_name || '未命名林分',
             species: props.dominant_species || '未知',
             volume: props.volume_per_ha || 0,
-            area: props.area || 0,
+            area: props.area_ha || 0,
             origin: props.origin || '未知',
-            age: props.age || '-',
-            density: props.density || '-'
+            age: props.stand_age || '-',
+            density: props.canopy_density || '-',  
+            standNo: props.xiao_ban_code || '-'
         }
         showPopup(data, coordinate)
     }
@@ -343,9 +335,10 @@ export function useMap(targetId, options = {}) {
         showPopup({
             type: 'list',
             features: features.map(f => ({
-                id: f.properties?.id || f.id,
+                id: f.properties?.zone_id || f.id,
                 name: f.properties?.stand_name || '未命名林分',
                 species: f.properties?.dominant_species || '未知',
+                standNo: f.properties?.xiao_ban_code || '-',  
                 ...f.properties
             }))
         }, coordinate)

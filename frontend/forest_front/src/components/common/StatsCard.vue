@@ -1,32 +1,25 @@
 <template>
-  <el-card 
+  <div 
     class="stats-card" 
     :style="cardStyle"
-    shadow="hover"
     @mouseenter="handleMouseEnter"
     @mouseleave="handleMouseLeave"
   >
-    <div class="stats-content">
-      <div class="stats-icon" :style="iconStyle">
-        <el-icon :size="32">
-          <component :is="getIcon(icon)" />
-        </el-icon>
-      </div>
-      <div class="stats-info">
-        <div class="stats-title">{{ title }}</div>
-        <div 
-          class="stats-value" 
-          :class="{ 'number-animate': isAnimating }"
-          :style="valueStyle"
-        >
-          {{ displayValue }}
-        </div>
-        <div v-if="subtitle" class="stats-subtitle">{{ subtitle }}</div>
-      </div>
+    <div class="icon-wrapper" :style="iconStyle">
+      <el-icon :size="24">
+        <component :is="getIcon(icon)" />
+      </el-icon>
     </div>
-    
-    <div class="stats-bar" :style="barStyle"></div>
-  </el-card>
+    <div class="content">
+      <div class="title">{{ title }}</div>
+      <div class="value" :class="{ animating: isAnimating }" :style="valueStyle">
+        {{ displayValue }}
+      </div>
+      <div class="subtitle">{{ subtitle }}</div>
+    </div>
+    <!-- 底部装饰条 -->
+    <div class="bottom-bar" :style="barStyle"></div>
+  </div>
 </template>
 
 <script setup>
@@ -73,7 +66,7 @@ const iconMap = {
 const getIcon = (name) => iconMap[name] || DataAnalysis
 
 const cardStyle = computed(() => ({
-  borderLeft: `4px solid ${props.color}`,
+  borderLeftColor: props.color,
   position: 'relative',
   overflow: 'hidden'
 }))
@@ -106,78 +99,91 @@ watch(() => props.value, () => {
   }, 300)
 })
 
-const handleMouseEnter = () => { isAnimating.value = true }
-const handleMouseLeave = () => { isAnimating.value = false }
+const handleMouseEnter = () => { 
+  if (props.animate) isAnimating.value = true 
+}
+
+const handleMouseLeave = () => { 
+  if (props.animate) isAnimating.value = false 
+}
 </script>
 
 <style scoped>
 .stats-card {
-  margin-bottom: 16px;
-  border-radius: 8px;
-  transition: all 0.3s ease;
-  cursor: pointer;
-}
-.stats-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 16px rgba(0,0,0,0.1) !important;
-}
-.stats-content {
+  background: #fff;
+  border-radius: 10px;
+  padding: 16px;
   display: flex;
   align-items: center;
-  padding: 8px 0;
+  gap: 12px;
+  border-left: 4px solid;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  min-width: 0;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
 }
-.stats-icon {
-  width: 64px;
-  height: 64px;
-  border-radius: 12px;
+
+.stats-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.icon-wrapper {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-right: 16px;
-  transition: all 0.3s ease;
+  flex-shrink: 0;
 }
-.stats-card:hover .stats-icon {
-  transform: scale(1.1);
-}
-.stats-info {
+
+.content {
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
 }
-.stats-title {
-  font-size: 14px;
-  color: #909399;
-  margin-bottom: 8px;
-  font-weight: 500;
+
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr); /* 3列 */
+  gap: 16px;
+  margin-bottom: 20px;
 }
-.stats-value {
-  font-size: 24px;
+
+.title {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.value {
+  font-size: 22px;
   font-weight: bold;
   line-height: 1.2;
-  transition: transform 0.3s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: transform 0.3s;
 }
-.stats-subtitle {
+
+.value.animating {
+  transform: scale(1.05);
+}
+
+.subtitle {
   font-size: 12px;
-  color: #c0c4cc;
-  margin-top: 4px;
+  color: #999;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.number-animate {
-  animation: numberPulse 0.3s ease;
-}
-@keyframes numberPulse {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.1); }
-  100% { transform: scale(1); }
-}
-@media (max-width: 768px) {
-  .stats-content {
-    flex-direction: column;
-    text-align: center;
-  }
-  .stats-icon {
-    margin-right: 0;
-    margin-bottom: 12px;
-  }
-  .stats-value {
-    font-size: 20px;
-  }
+
+.bottom-bar {
+  pointer-events: none;
 }
 </style>

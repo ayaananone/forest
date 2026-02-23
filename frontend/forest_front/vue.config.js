@@ -1,29 +1,30 @@
+// vue.config.js
+
+const path = require('path')
+
 module.exports = {
-  // 前端服务端口（避免与GeoServer 8080冲突）
+  // 前端服务端口
   devServer: {
     port: 8082,
-     client: {
-      overlay: false  // 完全禁用错误覆盖层
+    client: {
+      overlay: false
     },
     // 代理配置
     proxy: {
-      // 代理GeoServer请求
+      // 代理 GeoServer 请求
       '/geoserver': {
         target: 'http://localhost:8080',
         changeOrigin: true,
-        pathRewrite: {
-          '^/geoserver': '/geoserver'
-        },
-        timeout: 30000,  // 30秒超时
-        proxyTimeout: 30000
+        timeout: 30000,
+        proxyTimeout: 30000,
+        onProxyReq: (proxyReq, req) => {
+          console.log('Proxying:', req.method, req.url)
+        }
       },
-      // 代理API请求
+      // 代理 API 请求
       '/api': {
         target: 'http://localhost:8081',
-        changeOrigin: true,
-        pathRewrite: {
-          '^/api': '/api'
-        }
+        changeOrigin: true
       }
     }
   },
@@ -32,9 +33,8 @@ module.exports = {
   configureWebpack: {
     resolve: {
       alias: {
-        '@': require('path').resolve(__dirname, 'src')
+        '@': path.resolve(__dirname, 'src')
       }
     }
   }
 }
-

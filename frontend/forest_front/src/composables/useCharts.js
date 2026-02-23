@@ -29,9 +29,7 @@ export function useSpeciesChart() {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: {
-                        display: false // 使用自定义图例
-                    },
+                    legend: { display: false },
                     tooltip: {
                         callbacks: {
                             label: (context) => {
@@ -52,19 +50,28 @@ export function useSpeciesChart() {
     const updateChart = (stats) => {
         if (!chartInstance.value) return
 
-        const labels = stats.map(s => s.species || '未知')
-        const data = stats.map(s => s.count || 0)
+        // 防御性处理
+        if (!stats || !Array.isArray(stats) || stats.length === 0) {
+            chartInstance.value.data.labels = []
+            chartInstance.value.data.datasets[0].data = []
+            chartInstance.value.update()
+            legendData.value = []
+            return
+        }
+
+        const validStats = stats.filter(s => s && typeof s === 'object')
+        const labels = validStats.map(s => s.species || s.dominant_species || '未知')
+        const data = validStats.map(s => s.count || s.totalCount || 0)
 
         chartInstance.value.data.labels = labels
         chartInstance.value.data.datasets[0].data = data
         chartInstance.value.update()
 
-        // 更新图例数据
         const total = data.reduce((a, b) => a + b, 0)
-        legendData.value = stats.map((s, index) => ({
+        legendData.value = validStats.map((s, index) => ({
             ...s,
             color: Object.values(SPECIES_COLORS)[index % Object.values(SPECIES_COLORS).length],
-            percentage: total > 0 ? ((s.count / total) * 100).toFixed(1) : 0
+            percentage: total > 0 ? (((s.count || s.totalCount || 0) / total) * 100).toFixed(1) : 0
         }))
     }
 

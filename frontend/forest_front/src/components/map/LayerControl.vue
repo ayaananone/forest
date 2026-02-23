@@ -8,7 +8,7 @@
             type="primary" 
             link 
             size="small"
-            @click="expandAll = !expandAll"
+            @click="toggleExpandAll"
           >
             {{ expandAll ? '收起' : '展开' }}
           </el-button>
@@ -135,9 +135,10 @@ const props = defineProps({
 const emit = defineEmits(['toggle', 'opacity-change', 'base-change'])
 
 // ==================== 状态管理 ====================
-
-const activeNames = ref(['base', 'business'])
-const expandAll = ref(true)
+// 默认收起所有面板
+const activeNames = ref([])
+// 默认收起状态
+const expandAll = ref(false)
 const selectedBase = ref('base')
 
 // ==================== 计算属性 ====================
@@ -158,6 +159,16 @@ const visibleLayerCount = computed(() => {
 })
 
 // ==================== 方法 ====================
+
+// 展开/收起全部面板
+const toggleExpandAll = () => {
+  expandAll.value = !expandAll.value
+  if (expandAll.value) {
+    activeNames.value = ['base', 'business', 'info']
+  } else {
+    activeNames.value = []
+  }
+}
 
 // 底图切换（互斥）
 const handleBaseChange = (layerName) => {
@@ -215,6 +226,11 @@ watch(() => props.layers, (newLayers) => {
     selectedBase.value = activeBase.name
   }
 }, { deep: true, immediate: true })
+
+// 监听折叠面板状态变化，同步到 expandAll
+watch(activeNames, (newActiveNames) => {
+  expandAll.value = newActiveNames.length > 0
+}, { immediate: true })
 </script>
 
 <style scoped>
