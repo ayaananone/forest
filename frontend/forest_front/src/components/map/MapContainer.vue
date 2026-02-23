@@ -24,14 +24,18 @@
       @opacity-change="handleOpacityChange"
     />
     
+    <!-- 半径查询组件 -->
     <RadiusQuery
+      ref="radiusQueryRef"
       v-model:active="radiusQueryActive"
       v-model:radius="radiusQueryRadius"
-      @query="handleRadiusQuery"
+      @show-circle-change="handleShowCircleChange"
+      @select-stand="handleRadiusSelectStand"
     />
     
+    <!-- 弹窗组件 -->
     <MapPopup
-      ref="popupRef"
+      id="popup"
       :content="popupContent"
       :visible="popupVisible"
       @close="closePopup"
@@ -48,6 +52,7 @@
         <el-form label-width="70px" size="small">
           <el-form-item label="树种">
             <el-select 
+              id="filter-species"
               v-model="filters.species" 
               placeholder="全部树种"
               clearable
@@ -65,6 +70,7 @@
           
           <el-form-item label="起源">
             <el-select 
+              id="filter-origin"
               v-model="filters.origin" 
               placeholder="全部起源"
               clearable
@@ -78,6 +84,7 @@
           
           <el-form-item label="最小蓄积">
             <el-slider
+              id="filter-volume"
               v-model="filters.minVolume"
               :max="500"
               :step="10"
@@ -102,7 +109,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { toLonLat, fromLonLat } from 'ol/proj'
 import LoadingMask from '@/components/common/LoadingMask.vue'
@@ -110,7 +117,8 @@ import LayerControl from '@/components/map/LayerControl.vue'
 import MapPopup from '@/components/map/MapPopup.vue'
 import RadiusQuery from '@/components/map/RadiusQuery.vue'
 import { useMap } from '@/composables/useMap'
-import { fetchStands, fetchNearbyStands } from '@/api/forest'
+import { fetchStands } from '@/api/forest' // 移除 fetchNearbyStands，在 useMap 中动态导入
+import { formatVolume } from '@/utils/formatters'
 
 const props = defineProps({
   targetId: {
@@ -129,7 +137,10 @@ const emit = defineEmits([
   'error'
 ])
 
-const popupRef = ref(null)
+// 引用
+const radiusQueryRef = ref(null)
+
+// 状态
 const isInitialized = ref(false)
 const error = ref(null)
 const currentZoom = ref(props.initialZoom)
@@ -151,14 +162,15 @@ const availableSpecies = ref([
 const layerList = ref([
   { name: 'base', label: '街道地图', visible: true, opacity: 1 },
   { name: 'satellite', label: '卫星影像', visible: false, opacity: 1 },
-  { name: 'stands', label: '林分分布', visible: true, opacity: 0.9 }, // 默认勾选
+  { name: 'stands', label: '林分分布', visible: true, opacity: 0.9 },
   { name: 'heatmap', label: '蓄积热力图', visible: false, opacity: 0.8 }
 ])
 
+// 弹窗状态
 const popupVisible = ref(false)
 const popupContent = ref(null)
 
-// 从 useMap 获取方法和状态
+// 使用 useMap - 传入半径查询状态
 const mapState = useMap(props.targetId, {
   onRadiusQueryResult: handleRadiusQueryResult,
   radiusQuery: {
@@ -167,7 +179,6 @@ const mapState = useMap(props.targetId, {
   }
 })
 
-// 解构获取需要的方法
 const {
   map,
   view,
@@ -178,8 +189,33 @@ const {
   clearHighlight,
   applyFilters,
   loadHeatmapFeatures,
-  destroyMap
+  destroyMap,
+  showPopup,
+  closePopup: mapClosePopup
 } = mapState
+
+// 监听 useMap 中的弹窗状态
+watch(() => mapState.popupVisible?.value, (newVal) => {
+  popupVisible.value = newVal || false
+})
+
+watch(() => mapState.popupContent?.value, (newVal) => {
+  popupContent.value = newVal
+})
+
+watch(() => mapState.popupContent?.value, (newVal) => {
+  if (newVal?.type === 'radius') {
+    // 更新 RadiusQuery 组件的结果
+    if (radiusQueryRef.value) {
+      radiusQueryRef.value.setResult(newVal)
+    }
+    
+    // 自动调整视图
+    if (newVal.stands?.length > 0 && view.value) {
+      fitViewToStands(newVal.stands)
+    }
+  }
+})
 
 onMounted(async () => {
   try {
@@ -218,6 +254,32 @@ const loadInitialData = async () => {
   }
 }
 
+// 调整视图以显示所有林分
+const fitViewToStands = (stands) => {
+  if (!view.value || stands.length === 0) return
+  
+  const coords = stands.map(s => fromLonLat([s.centerLon, s.centerLat]))
+  
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+  
+  coords.forEach(coord => {
+    minX = Math.min(minX, coord[0])
+    minY = Math.min(minY, coord[1])
+    maxX = Math.max(maxX, coord[0])
+    maxY = Math.max(maxY, coord[1])
+  })
+  
+  const padding = 100
+  const extent = [minX - padding, minY - padding, maxX + padding, maxY + padding]
+  
+  view.value.fit(extent, {
+    padding: [100, 100, 100, 100],
+    duration: 500,
+    maxZoom: 16
+  })
+}
+
+// ==================== 图层控制 ====================
 const handleLayerToggle = (layerName, visible) => {
   toggleLayer(layerName, visible)
   
@@ -226,10 +288,12 @@ const handleLayerToggle = (layerName, visible) => {
   
   if (layerName === 'base' && visible) {
     toggleLayer('satellite', false)
-    layerList.value.find(l => l.name === 'satellite').visible = false
+    const satLayer = layerList.value.find(l => l.name === 'satellite')
+    if (satLayer) satLayer.visible = false
   } else if (layerName === 'satellite' && visible) {
     toggleLayer('base', false)
-    layerList.value.find(l => l.name === 'base').visible = false
+    const baseLayer = layerList.value.find(l => l.name === 'base')
+    if (baseLayer) baseLayer.visible = false
   }
 }
 
@@ -239,12 +303,11 @@ const handleOpacityChange = (layerName, opacity) => {
   if (layer) layer.opacity = opacity
 }
 
-// 统一处理筛选变化
+// ==================== 筛选 ====================
 const handleFilterChange = () => {
   doApplyFilters()
 }
 
-// 执行筛选
 const doApplyFilters = () => {
   if (!applyFilters) {
     console.warn('applyFilters 方法不可用')
@@ -269,20 +332,38 @@ const resetFilters = () => {
   ElMessage.success('筛选已重置')
 }
 
-const showPopup = (data, coordinate) => {
-  popupContent.value = data
-  popupVisible.value = true
-  popupRef.value?.setPosition(coordinate)
-}
-
+// ==================== 弹窗处理 ====================
 const closePopup = () => {
   popupVisible.value = false
   popupContent.value = null
   clearHighlight()
+  if (mapClosePopup) {
+    mapClosePopup()
+  }
 }
 
 const handleZoomTo = (standId) => {
-  highlightStand(standId)
+  console.log('居中显示林场:', standId)
+  
+  const markerLayer = mapState.getLayerByName('stands_markers')
+  if (markerLayer && view.value) {
+    const markers = markerLayer.getSource().getFeatures()
+    const marker = markers.find(f => {
+      const fid = f.get('id') || f.get('zone_id') || f.get('stand_id') || f.get('xiao_ban_code')
+      return String(fid) === String(standId)
+    })
+    
+    if (marker) {
+      const geom = marker.getGeometry()
+      const center = geom.getCoordinates()
+      
+      view.value.animate({
+        center: center,
+        duration: 500
+      })
+    }
+  }
+  
   closePopup()
 }
 
@@ -291,27 +372,71 @@ const handleShowDetail = (standId) => {
   closePopup()
 }
 
-const handleRadiusQuery = async (lon, lat) => {
-  if (!radiusQueryActive.value) return
-  
-  try {
-    ElMessage.info(`正在查询 ${radiusQueryRadius.value}m 范围内的林分...`)
-    const stands = await fetchNearbyStands(lon, lat, radiusQueryRadius.value)
-    emit('radius-query-result', stands, lon, lat, radiusQueryRadius.value)
-    ElMessage.success(`找到 ${stands.length} 个林分`)
-  } catch (err) {
-    ElMessage.error('半径查询失败: ' + err.message)
+// ==================== 半径查询相关 ====================
+const handleShowCircleChange = (visible) => {
+  const highlightLayer = mapState.getLayerByName('highlight')
+  if (highlightLayer) {
+    highlightLayer.setVisible(visible)
   }
 }
 
+const handleRadiusSelectStand = (stand) => {
+  console.log('半径查询结果中选择林分:', stand)
+  
+  // 居中到该林分
+  if (view.value && stand.centerLon && stand.centerLat) {
+    view.value.animate({
+      center: fromLonLat([stand.centerLon, stand.centerLat]),
+      duration: 500
+    })
+  }
+  
+  // 显示该林分的详细信息
+  const coordinate = fromLonLat([stand.centerLon, stand.centerLat])
+  
+  const data = {
+    type: 'stand_detail',
+    id: stand.id || stand.xiaoBanCode,
+    name: stand.standName || stand.xiaoBanCode || '未命名林分',
+    standNo: stand.xiaoBanCode || '-',
+    species: stand.dominantSpecies || '未知',
+    origin: stand.origin || '未知',
+    area: stand.area || 0,
+    volumePerHa: stand.volumePerHa || 0,
+    totalVolume: (stand.volumePerHa || 0) * (stand.area || 0),
+    age: stand.standAge || '-',
+    density: stand.canopyDensity || '-'
+  }
+  
+  showPopup(data, coordinate)
+  
+  // 高亮该林分
+  highlightStandById(stand.id || stand.xiaoBanCode)
+}
+
+const highlightStandById = (standId) => {
+  const markerLayer = mapState.getLayerByName('stands_markers')
+  if (!markerLayer) return
+  
+  const markers = markerLayer.getSource().getFeatures()
+  const marker = markers.find(f => {
+    const fid = f.get('id') || f.get('zone_id') || f.get('stand_id') || f.get('xiao_ban_code')
+    return String(fid) === String(standId)
+  })
+  
+  if (marker) {
+    highlightStand(marker)
+  }
+}
+
+// 半径查询结果回调
 function handleRadiusQueryResult(stands, lon, lat, radius) {
-  showPopup({
-    type: 'radius',
-    stands,
-    lon,
-    lat,
-    radius
-  }, fromLonLat([lon, lat]))
+  console.log('半径查询结果:', stands.length, '个林分')
+  emit('radius-query-result', stands, lon, lat, radius)
+  
+  // 显示成功消息
+  const totalVolume = stands.reduce((sum, s) => sum + (s.volumePerHa || 0) * (s.area || 0), 0)
+  ElMessage.success(`找到 ${stands.length} 个林分，总蓄积 ${formatVolume(totalVolume)}`)
 }
 </script>
 

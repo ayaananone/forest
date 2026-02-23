@@ -1,11 +1,11 @@
 <template>
   <div 
+    v-if="visible"
     id="popup" 
-    class="map-popup" 
-    :class="{ 'popup-visible': visible }"
+    class="map-popup"
   >
-    <!-- 详情弹窗 -->
-    <div v-if="content?.type === 'detail'" class="popup-detail">
+    <!-- 林场详情弹窗 -->
+    <div v-if="content?.type === 'stand_detail'" class="popup-detail">
       <div class="popup-header">
         <h4>
           <el-icon color="#2E7D32"><View /></el-icon>
@@ -19,7 +19,7 @@
       <div class="popup-body">
         <el-descriptions :column="1" size="small" border>
           <el-descriptions-item label="林分编号">
-            {{ content?.id || '-' }}
+            {{ content?.standNo || content?.id || '-' }}
           </el-descriptions-item>
           
           <el-descriptions-item label="优势树种">
@@ -36,41 +36,66 @@
             {{ content?.origin || '-' }}
           </el-descriptions-item>
           
+          <el-descriptions-item label="林场总面积">
+            <span class="highlight-value area-value">{{ content?.area || 0 }} 公顷</span>
+          </el-descriptions-item>
+          
+          <el-descriptions-item label="每公顷蓄积量">
+            <span class="highlight-value volume-value">{{ content?.volumePerHa || 0 }} m³/ha</span>
+          </el-descriptions-item>
+          
+          <el-descriptions-item label="总蓄积量">
+            <span class="highlight-value total-volume">{{ content?.totalVolume || 0 }} m³</span>
+          </el-descriptions-item>
+          
           <el-descriptions-item label="林龄">
             {{ content?.age ? content.age + ' 年' : '-' }}
           </el-descriptions-item>
           
           <el-descriptions-item label="郁闭度">
-            {{ content?.density && content.density !== '-' ? content.density + '%' : '-' }}
-          </el-descriptions-item>
-          
-          <el-descriptions-item label="面积">
-            <span class="highlight-value">{{ formatArea(content?.area) }}</span>
-          </el-descriptions-item>
-          
-          <el-descriptions-item label="每公顷蓄积">
-            <span class="volume-value">{{ content?.volume || 0 }} m³</span>
-          </el-descriptions-item>
-          
-          <el-descriptions-item label="总蓄积估算">
-            <span class="total-volume">
-              {{ calculateTotalVolume(content?.volume, content?.area) }}
-            </span>
+            {{ content?.density && content.density !== '-' ? content.density : '-' }}
           </el-descriptions-item>
         </el-descriptions>
       </div>
       
       <div class="popup-footer">
         <el-button type="primary" size="small" @click="handleShowDetail">
-          <el-icon><Document /></el-icon> 详情
-        </el-button>
-        <el-button type="success" size="small" @click="handleZoomTo">
-          <el-icon><ZoomIn /></el-icon> 定位
+          <el-icon><Document /></el-icon> 查看详情
         </el-button>
       </div>
     </div>
     
-    <!-- ... 其他弹窗类型 ... -->
+    <!-- 加载中 -->
+    <div v-else-if="content?.type === 'loading'" class="popup-loading">
+      <el-icon class="loading-icon" :size="24"><Loading /></el-icon>
+      <span>{{ content?.message || '查询中...' }}</span>
+    </div>
+    
+    <!-- 错误提示 -->
+    <div v-else-if="content?.type === 'error'" class="popup-error">
+      <el-icon :size="24" color="#F56C6C"><CircleClose /></el-icon>
+      <span>{{ content?.message || '查询失败' }}</span>
+    </div>
+    
+    <!-- 半径查询结果 -->
+    <div v-else-if="content?.type === 'radius'" class="popup-radius">
+      <div class="popup-header">
+        <h4>
+          <el-icon color="#2E7D32"><Search /></el-icon>
+          半径查询结果
+        </h4>
+        <el-button type="danger" link size="small" @click="handleClose">
+          <el-icon><Close /></el-icon>
+        </el-button>
+      </div>
+      <div class="popup-body">
+        <div class="radius-info">
+          <p>查询半径: <strong>{{ content?.radius }}m</strong></p>
+          <p>找到林分: <strong>{{ content?.stands?.length || 0 }} 个</strong></p>
+          <p>总蓄积量: <strong>{{ formatVolume(content?.totalVolume) }}</strong></p>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -78,11 +103,13 @@
 import { 
   View, 
   Close, 
-  Document, 
-  ZoomIn 
+  Document,  
+  Loading, 
+  CircleClose, 
+  Search 
 } from '@element-plus/icons-vue'
 import { SPECIES_COLORS } from '@/config'
-import { formatArea, formatVolume } from '@/utils/formatters'
+import { formatVolume } from '@/utils/formatters'
 
 const props = defineProps({
   content: {
@@ -95,14 +122,10 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['close', 'zoom-to', 'show-detail', 'select-stand'])
+const emit = defineEmits(['close', 'zoom-to', 'show-detail'])
 
 const handleClose = () => {
   emit('close')
-}
-
-const handleZoomTo = () => {
-  emit('zoom-to', props.content?.id)
 }
 
 const handleShowDetail = () => {
@@ -112,9 +135,104 @@ const handleShowDetail = () => {
 const getSpeciesColor = (species) => {
   return SPECIES_COLORS[species] || '#757575'
 }
-
-const calculateTotalVolume = (volume, area) => {
-  if (!volume || !area) return '-'
-  return formatVolume(volume * area)
-}
 </script>
+
+<style scoped>
+.map-popup {
+  position: absolute;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  min-width: 280px;
+  max-width: 320px;
+  z-index: 1000;
+}
+
+.popup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid #ebeef5;
+  background: linear-gradient(135deg, #f1f8e9 0%, #fff 100%);
+  border-radius: 12px 12px 0 0;
+}
+
+.popup-header h4 {
+  margin: 0;
+  font-size: 15px;
+  color: #2E7D32;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.popup-body {
+  padding: 12px 16px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.popup-footer {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid #ebeef5;
+  background: #fafafa;
+  border-radius: 0 0 12px 12px;
+}
+
+.highlight-value {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.area-value {
+  color: #388E3C;
+}
+
+.volume-value {
+  color: #00796B;
+}
+
+.total-volume {
+  color: #D32F2F;
+  font-size: 15px;
+}
+
+.popup-loading,
+.popup-error {
+  padding: 24px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: #606266;
+}
+
+.loading-icon {
+  animation: rotate 1s linear infinite;
+}
+
+@keyframes rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.popup-radius .radius-info {
+  background: #f5f7fa;
+  padding: 12px;
+  border-radius: 8px;
+}
+
+.popup-radius .radius-info p {
+  margin: 6px 0;
+  color: #606266;
+}
+
+.popup-radius .radius-info strong {
+  color: #2E7D32;
+  font-size: 14px;
+}
+</style>

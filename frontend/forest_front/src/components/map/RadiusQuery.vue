@@ -121,6 +121,40 @@
               <span class="label">总蓄积</span>
               <span class="value">{{ formatVolume(lastResult.totalVolume) }}</span>
             </div>
+            <div class="summary-item">
+              <span class="label">总面积</span>
+              <span class="value">{{ lastResult.totalArea.toFixed(2) }} ha</span>
+            </div>
+          </div>
+          
+          <!-- 结果列表 -->
+          <div v-if="lastResult.stands && lastResult.stands.length > 0" class="result-list">
+            <el-divider />
+            <div 
+              v-for="stand in lastResult.stands.slice(0, 5)" 
+              :key="stand.id"
+              class="result-stand-item"
+              @click="selectStand(stand)"
+            >
+              <div class="stand-info">
+                <span class="stand-name">{{ stand.standName || stand.xiaoBanCode || '未命名' }}</span>
+                <span class="stand-species">{{ stand.dominantSpecies || '未知' }}</span>
+              </div>
+              <div class="stand-data">
+                <span class="stand-distance">{{ stand.distance }}m</span>
+                <span class="stand-volume">{{ stand.volumePerHa || 0 }} m³/ha</span>
+              </div>
+            </div>
+            <div v-if="lastResult.stands.length > 5" class="more-stands">
+              还有 {{ lastResult.stands.length - 5 }} 个林分...
+            </div>
+          </div>
+          
+          <!-- 导出按钮 -->
+          <div class="export-action">
+            <el-button type="success" size="small" plain @click="exportResult">
+              <el-icon><Download /></el-icon> 导出结果
+            </el-button>
           </div>
         </el-card>
       </div>
@@ -130,8 +164,9 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue'
-import { Search, Close, QuestionFilled, Delete } from '@element-plus/icons-vue'
+import { Search, Close, QuestionFilled, Delete, Download } from '@element-plus/icons-vue'
 import { formatVolume } from '@/utils/formatters'
+import { exportRadiusQueryResult } from '@/utils/export'
 
 const props = defineProps({
   active: {
@@ -148,7 +183,8 @@ const emit = defineEmits([
   'update:active', 
   'update:radius', 
   'query', 
-  'show-circle-change'
+  'show-circle-change',
+  'select-stand'
 ])
 
 const localRadius = ref(props.radius)
@@ -188,23 +224,61 @@ const handleShowCircleChange = (val) => {
 const handleQuickQuery = (radius) => {
   localRadius.value = radius
   emit('update:radius', radius)
-  // 触发查询事件，由父组件处理地图点击
-  emit('query-quick', radius)
 }
 
-const setResult = (result) => {
-  lastResult.value = {
-    radius: result.radius,
-    count: result.stands?.length || 0,
-    totalVolume: result.stands?.reduce((sum, s) => 
-      sum + (s.volumePerHa || 0) * (s.area || 0), 0
-    ) || 0,
-    timestamp: Date.now()
-  }
+const selectStand = (stand) => {
+  emit('select-stand', stand)
 }
 
 const clearResult = () => {
   lastResult.value = null
+}
+
+const exportResult = () => {
+  if (lastResult.value && lastResult.value.stands) {
+    exportRadiusQueryResult(lastResult.value.stands)
+  }
+}
+
+// ==================== 外部调用的方法 ====================
+
+const setResult = (result) => {
+  // 计算每个林分的距离
+  const standsWithDistance = result.stands?.map(stand => ({
+    ...stand,
+    distance: Math.round(calculateDistance(
+      result.lon, 
+      result.lat, 
+      stand.centerLon, 
+      stand.centerLat
+    ))
+  })) || []
+
+  // 按距离排序
+  standsWithDistance.sort((a, b) => a.distance - b.distance)
+
+  lastResult.value = {
+    radius: result.radius,
+    count: result.stands?.length || 0,
+    totalVolume: result.totalVolume || 0,
+    totalArea: result.stands?.reduce((sum, s) => sum + (s.area || 0), 0) || 0,
+    stands: standsWithDistance,
+    centerLon: result.lon,
+    centerLat: result.lat,
+    timestamp: Date.now()
+  }
+}
+
+// 计算两点间距离（米）
+const calculateDistance = (lon1, lat1, lon2, lat2) => {
+  const R = 6371000 // 地球半径（米）
+  const dLat = (lat2 - lat1) * Math.PI / 180
+  const dLon = (lon2 - lon1) * Math.PI / 180
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon/2) * Math.sin(dLon/2)
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
+  return R * c
 }
 
 // ==================== 导出方法 ====================
@@ -331,6 +405,75 @@ defineExpose({
 .summary-item .value.highlight {
   color: #F56C6C;
   font-size: 14px;
+}
+
+/* 结果列表 */
+.result-list {
+  margin-top: 8px;
+}
+
+.result-stand-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  margin-bottom: 6px;
+  background: #f5f7fa;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.result-stand-item:hover {
+  background: #e8f5e9;
+  transform: translateX(4px);
+}
+
+.stand-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stand-name {
+  font-weight: 500;
+  color: #303133;
+  font-size: 13px;
+}
+
+.stand-species {
+  color: #909399;
+  font-size: 11px;
+}
+
+.stand-data {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.stand-distance {
+  color: #2E7D32;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.stand-volume {
+  color: #606266;
+  font-size: 11px;
+}
+
+.more-stands {
+  text-align: center;
+  color: #909399;
+  font-size: 12px;
+  padding: 8px;
+}
+
+.export-action {
+  margin-top: 12px;
+  text-align: center;
 }
 
 /* 响应式 */

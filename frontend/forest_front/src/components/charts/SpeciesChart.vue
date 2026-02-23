@@ -1,6 +1,5 @@
 <template>
   <div class="species-chart">
-    <!-- 只保留一个标题 -->
     <div class="chart-header">
       <span class="title">🌲 树种分布</span>
       <el-tag size="small" type="success">{{ totalCount }}个小班</el-tag>
