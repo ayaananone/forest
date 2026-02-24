@@ -10,8 +10,7 @@ import lombok.AllArgsConstructor;
 public class TreeDTO {
     private Integer treeId;
     private Integer plotId;
-    private Integer standId;
-    private String standName;
+    private Integer standId;      // 小班编号
     private Integer treeNo;
     private String species;
     private String speciesCode;
