@@ -18,7 +18,7 @@
 
 ### 主界面
 
-![主界面](docs/images/main-interface.png)
+![主界面](./docs/images/main-interface.png)
 
 *智慧林场综合管理平台主界面，左侧统计面板，右侧地图展示*
 ### 核心功能
@@ -34,7 +34,7 @@
 ---
 ### 交互演示
 
-![功能演示](docs/images/demo.gif)
+![功能演示](./docs/images/demo.gif)
 
 *半径查询、图层切换、详情展示等核心功能演示*
 
@@ -204,18 +204,18 @@ spring:
 ### 地图功能
 
 **半径范围查询**
-![半径查询](docs/images/radius-query.png)
+![半径查询](./docs/images/radius-query.png)
 
 **树种与起源筛选**
-![筛选功能](docs/images/species-filter.png)
+![筛选功能](./docs/images/species-filter.png)
 
 ### 后端运行
 
 **项目结构**
-![后端结构](docs/images/backend-structure.png)
+![后端结构](./docs/images/backend-structure.png)
 
 **启动成功**
-![后端运行](docs/images/backend-running.png)
+![后端运行](./docs/images/backend-running.png)
 ## 💡 技术亮点
 
 ### 前端亮点
