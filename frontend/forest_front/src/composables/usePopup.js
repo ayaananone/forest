@@ -1,20 +1,16 @@
 /**
- * 弹窗管理组合式函数
+ * 弹窗管理组合式函数 - 简单稳定版
  */
-import { ref} from 'vue'
+import { ref, nextTick } from 'vue'
 import { Overlay } from 'ol'
 import { fromLonLat } from 'ol/proj'
 import { SPECIES_COLORS } from '@/config'
 import { calculateDistance } from '@/utils/calculations'
-import { exportRadiusQueryResult } from '@/utils/export'
 
 export function usePopup(map) {
     const popupOverlay = ref(null)
-    const currentFeature = ref(null)
     const popupContent = ref(null)
-    const popupPosition = ref(null)
     const popupVisible = ref(false)
-    const popupType = ref('detail')
 
     // ==================== 初始化 ====================
 
@@ -24,15 +20,13 @@ export function usePopup(map) {
             return
         }
 
-        // 使用 setTimeout 确保 DOM 已渲染
-        setTimeout(() => {
+        // 使用 nextTick 确保 DOM 已渲染
+        nextTick(() => {
             const popupElement = document.getElementById('popup')
-            console.log('Init popup element:', popupElement) // 调试
             
             if (!popupElement) {
-                console.warn('未找到弹窗元素 #popup，将在 500ms 后重试')
-                // 重试
-                setTimeout(initPopup, 500)
+                console.warn('未找到弹窗元素 #popup，1秒后重试')
+                setTimeout(initPopup, 1000)
                 return
             }
 
@@ -49,48 +43,28 @@ export function usePopup(map) {
             })
 
             map.value.addOverlay(popupOverlay.value)
-            console.log('Popup overlay initialized:', popupOverlay.value) // 调试
-        }, 100)
+            console.log('✓ Popup overlay initialized')
+        })
     }
 
     // ==================== 弹窗控制 ====================
 
     const showPopup = (data, coordinate) => {
-        console.log('showPopup called:', data, coordinate) // 调试
-        
         popupContent.value = data
-        popupPosition.value = coordinate
-        popupType.value = data.type || 'detail'
         popupVisible.value = true
 
-        console.log('popupVisible set to:', popupVisible.value) // 调试
-        console.log('popupOverlay:', popupOverlay.value) // 调试
-
-        if (popupOverlay.value) {
-            popupOverlay.value.setPosition(coordinate)
-            console.log('Popup position set to:', coordinate)
-        } else {
-            console.error('popupOverlay is null, trying to init again...')
-            // 尝试重新初始化
-            initPopup()
-            // 延迟设置位置
-            setTimeout(() => {
-                if (popupOverlay.value) {
-                    popupOverlay.value.setPosition(coordinate)
-                }
-            }, 300)
-        }
-
-        currentFeature.value = data
+        nextTick(() => {
+            if (popupOverlay.value) {
+                popupOverlay.value.setPosition(coordinate)
+            }
+        })
     }
 
     const closePopup = () => {
-        console.log('closePopup called') // 调试
         popupVisible.value = false
         if (popupOverlay.value) {
             popupOverlay.value.setPosition(undefined)
         }
-        currentFeature.value = null
         popupContent.value = null
     }
 
@@ -109,7 +83,6 @@ export function usePopup(map) {
         const coordinate = fromLonLat([lon, lat])
         
         const totalVolume = stands.reduce((sum, s) => sum + (s.volumePerHa || 0) * (s.area || 0), 0)
-        const totalArea = stands.reduce((sum, s) => sum + (s.area || 0), 0)
 
         const standsWithDistance = stands.map(stand => ({
             ...stand,
@@ -122,7 +95,6 @@ export function usePopup(map) {
             lon,
             lat,
             radius,
-            totalArea,
             totalVolume,
             count: stands.length
         }
@@ -136,40 +108,16 @@ export function usePopup(map) {
         return SPECIES_COLORS[species] || '#757575'
     }
 
-    const formatDistance = (lon1, lat1, lon2, lat2) => {
-        return calculateDistance(lon1, lat1, lon2, lat2).toFixed(0)
-    }
-
-    const setPosition = (coordinate) => {
-        if (popupOverlay.value) {
-            popupOverlay.value.setPosition(coordinate)
-        }
-    }
-
-    // ==================== 导出功能 ====================
-
-    const exportQueryResult = () => {
-        if (popupContent.value?.type === 'radius' && popupContent.value.stands) {
-            exportRadiusQueryResult(popupContent.value.stands)
-        }
-    }
-
     return {
         popupOverlay,
-        currentFeature,
         popupContent,
-        popupPosition,
         popupVisible,
-        popupType,
         initPopup,
         showPopup,
         closePopup,
         showLoading,
         showError,
         showRadiusQueryResult,
-        exportQueryResult,
-        getSpeciesColor,
-        formatDistance,
-        setPosition
+        getSpeciesColor
     }
 }

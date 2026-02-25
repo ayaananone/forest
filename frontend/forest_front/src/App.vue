@@ -250,6 +250,7 @@ html, body, #app {
   min-width: 0;
   min-height: 0;
   transition: all 0.3s ease;
+  height: 100%;
 }
 
 .map-panel.expanded {

@@ -1,3 +1,4 @@
+-- 1. 林场表
 CREATE TABLE forest_zone (
                              zone_id SERIAL PRIMARY KEY,
                              zone_name VARCHAR(100),

@@ -1,6 +1,6 @@
 <template>
   <div 
-    v-if="visible"
+    v-show="visible"
     id="popup" 
     class="map-popup"
   >
@@ -58,9 +58,10 @@
         </el-descriptions>
       </div>
       
+      <!-- 修改：添加下载按钮，移除查看详情按钮 -->
       <div class="popup-footer">
-        <el-button type="primary" size="small" @click="handleShowDetail">
-          <el-icon><Document /></el-icon> 查看详情
+        <el-button type="success" size="small" @click="handleDownload">
+          <el-icon><Download /></el-icon> 下载单木数据
         </el-button>
       </div>
     </div>
@@ -103,13 +104,13 @@
 import { 
   View, 
   Close, 
-  Document,  
   Loading, 
   CircleClose, 
-  Search 
+  Search,
+  Download
 } from '@element-plus/icons-vue'
 import { SPECIES_COLORS } from '@/config'
-import { formatVolume } from '@/utils/formatters'
+import { ElMessage } from 'element-plus'
 
 const props = defineProps({
   content: {
@@ -122,18 +123,78 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['close', 'zoom-to', 'show-detail'])
+const emit = defineEmits(['close', 'zoom-to', 'download'])
 
 const handleClose = () => {
   emit('close')
 }
 
-const handleShowDetail = () => {
-  emit('show-detail', props.content?.id)
+// 新增：处理下载按钮点击
+const handleDownload = async () => {
+  if (!props.content?.id) {
+    ElMessage.warning('无效的小班ID')
+    return
+  }
+  
+  const standId = props.content.id
+  
+  try {
+    ElMessage.info('正在下载单木数据...')
+    
+    const response = await fetch(`/api/trees/stand/csv?standId=${standId}`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'text/csv,application/octet-stream'
+      }
+    })
+    
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new Error('该小班暂无单木数据')
+      }
+      throw new Error(`下载失败: HTTP ${response.status}`)
+    }
+    
+    // 获取文件名
+    const contentDisposition = response.headers.get('content-disposition')
+    let filename = `小班_${standId}_单木数据.csv`
+    if (contentDisposition) {
+      const filenameMatch = contentDisposition.match(/filename\*?=(?:UTF-8'')?([^;]+)/i)
+      if (filenameMatch) {
+        filename = decodeURIComponent(filenameMatch[1].replace(/['"]/g, ''))
+      }
+    }
+    
+    // 创建下载链接
+    const blob = await response.blob()
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+    
+    ElMessage.success(`小班 ${standId} 的单木数据下载成功`)
+    
+  } catch (error) {
+    console.error('下载单木数据失败:', error)
+    ElMessage.error(error.message || '下载失败，请重试')
+  }
 }
 
 const getSpeciesColor = (species) => {
   return SPECIES_COLORS[species] || '#757575'
+}
+
+// 简单的体积格式化函数
+const formatVolume = (volume) => {
+  if (!volume || volume === 0) return '0 m³'
+  if (volume >= 10000) {
+    return (volume / 10000).toFixed(2) + ' 万m³'
+  }
+  return volume.toFixed(2) + ' m³'
 }
 </script>
 

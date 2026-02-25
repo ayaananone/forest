@@ -113,6 +113,12 @@ export function useMap(targetId, options = {}) {
                 ])
             })
 
+            // 延迟更新尺寸
+            setTimeout(() => {
+            map.value?.updateSize()
+            console.log('✓ 强制更新地图尺寸')
+            }, 200)
+
             initializeLayers(baseSource)
             initPopup()
 
