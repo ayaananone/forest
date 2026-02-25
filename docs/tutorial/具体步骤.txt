@@ -1,0 +1,3 @@
+教程详见：
+《从零开始配置 GeoServer：发布林业 WMS 服务完整指南》：https://blog.csdn.net/Youn_Ryyy/article/details/135683093?spm=1001.2014.3001.5501
+《智慧林场 GIS 平台（二）：Spring Boot 后端与 PostGIS 空间数据库配置》：https://blog.csdn.net/Youn_Ryyy/article/details/158391570?spm=1001.2014.3001.5501
