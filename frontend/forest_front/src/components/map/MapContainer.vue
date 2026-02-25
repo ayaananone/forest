@@ -33,14 +33,13 @@
       @select-stand="handleRadiusSelectStand"
     />
     
-    <!-- 弹窗组件 -->
+    <!-- 弹窗组件 - 使用 v-show 保持 DOM 存在 -->
     <MapPopup
       id="popup"
       :content="popupContent"
       :visible="popupVisible"
       @close="closePopup"
       @zoom-to="handleZoomTo"
-      @show-detail="handleShowDetail"
     />
     
     <!-- 筛选面板 -->
@@ -50,9 +49,9 @@
           <span>🔍 筛选条件</span>
         </template>
         <el-form label-width="70px" size="small">
+          <!-- 树种 -->
           <el-form-item label="树种">
             <el-select 
-              id="filter-species"
               v-model="filters.species" 
               placeholder="全部树种"
               clearable
@@ -68,9 +67,9 @@
             </el-select>
           </el-form-item>
           
+          <!-- 起源 -->
           <el-form-item label="起源">
             <el-select 
-              id="filter-origin"
               v-model="filters.origin" 
               placeholder="全部起源"
               clearable
@@ -82,16 +81,18 @@
             </el-select>
           </el-form-item>
           
-          <el-form-item label="最小蓄积">
+          <!-- 最小蓄积 - 修复：移除 label 属性，使用自定义标签 -->
+          <div class="filter-item">
+            <span class="filter-label">最小蓄积</span>
             <el-slider
-              id="filter-volume"
               v-model="filters.minVolume"
               :max="500"
               :step="10"
               @change="handleFilterChange"
             />
-          </el-form-item>
+          </div>
           
+          <!-- 按钮 -->
           <el-form-item>
             <el-button type="primary" size="small" @click="resetFilters">
               重置筛选
@@ -109,7 +110,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { toLonLat, fromLonLat } from 'ol/proj'
 import LoadingMask from '@/components/common/LoadingMask.vue'
@@ -117,8 +118,7 @@ import LayerControl from '@/components/map/LayerControl.vue'
 import MapPopup from '@/components/map/MapPopup.vue'
 import RadiusQuery from '@/components/map/RadiusQuery.vue'
 import { useMap } from '@/composables/useMap'
-import { fetchStands } from '@/api/forest' // 移除 fetchNearbyStands，在 useMap 中动态导入
-import { formatVolume } from '@/utils/formatters'
+import { fetchStands } from '@/api/forest'
 
 const props = defineProps({
   targetId: {
@@ -166,11 +166,7 @@ const layerList = ref([
   { name: 'heatmap', label: '蓄积热力图', visible: false, opacity: 0.8 }
 ])
 
-// 弹窗状态
-const popupVisible = ref(false)
-const popupContent = ref(null)
-
-// 使用 useMap - 传入半径查询状态
+// 使用 useMap
 const mapState = useMap(props.targetId, {
   onRadiusQueryResult: handleRadiusQueryResult,
   radiusQuery: {
@@ -191,31 +187,10 @@ const {
   loadHeatmapFeatures,
   destroyMap,
   showPopup,
-  closePopup: mapClosePopup
+  closePopup: mapClosePopup,
+  popupContent,
+  popupVisible
 } = mapState
-
-// 监听 useMap 中的弹窗状态
-watch(() => mapState.popupVisible?.value, (newVal) => {
-  popupVisible.value = newVal || false
-})
-
-watch(() => mapState.popupContent?.value, (newVal) => {
-  popupContent.value = newVal
-})
-
-watch(() => mapState.popupContent?.value, (newVal) => {
-  if (newVal?.type === 'radius') {
-    // 更新 RadiusQuery 组件的结果
-    if (radiusQueryRef.value) {
-      radiusQueryRef.value.setResult(newVal)
-    }
-    
-    // 自动调整视图
-    if (newVal.stands?.length > 0 && view.value) {
-      fitViewToStands(newVal.stands)
-    }
-  }
-})
 
 onMounted(async () => {
   try {
@@ -252,31 +227,6 @@ const loadInitialData = async () => {
     console.error('加载数据失败:', err)
     ElMessage.warning('林分数据加载失败')
   }
-}
-
-// 调整视图以显示所有林分
-const fitViewToStands = (stands) => {
-  if (!view.value || stands.length === 0) return
-  
-  const coords = stands.map(s => fromLonLat([s.centerLon, s.centerLat]))
-  
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
-  
-  coords.forEach(coord => {
-    minX = Math.min(minX, coord[0])
-    minY = Math.min(minY, coord[1])
-    maxX = Math.max(maxX, coord[0])
-    maxY = Math.max(maxY, coord[1])
-  })
-  
-  const padding = 100
-  const extent = [minX - padding, minY - padding, maxX + padding, maxY + padding]
-  
-  view.value.fit(extent, {
-    padding: [100, 100, 100, 100],
-    duration: 500,
-    maxZoom: 16
-  })
 }
 
 // ==================== 图层控制 ====================
@@ -334,8 +284,6 @@ const resetFilters = () => {
 
 // ==================== 弹窗处理 ====================
 const closePopup = () => {
-  popupVisible.value = false
-  popupContent.value = null
   clearHighlight()
   if (mapClosePopup) {
     mapClosePopup()
@@ -367,11 +315,6 @@ const handleZoomTo = (standId) => {
   closePopup()
 }
 
-const handleShowDetail = (standId) => {
-  emit('stand-select', standId)
-  closePopup()
-}
-
 // ==================== 半径查询相关 ====================
 const handleShowCircleChange = (visible) => {
   const highlightLayer = mapState.getLayerByName('highlight')
@@ -383,7 +326,6 @@ const handleShowCircleChange = (visible) => {
 const handleRadiusSelectStand = (stand) => {
   console.log('半径查询结果中选择林分:', stand)
   
-  // 居中到该林分
   if (view.value && stand.centerLon && stand.centerLat) {
     view.value.animate({
       center: fromLonLat([stand.centerLon, stand.centerLat]),
@@ -391,7 +333,6 @@ const handleRadiusSelectStand = (stand) => {
     })
   }
   
-  // 显示该林分的详细信息
   const coordinate = fromLonLat([stand.centerLon, stand.centerLat])
   
   const data = {
@@ -410,7 +351,6 @@ const handleRadiusSelectStand = (stand) => {
   
   showPopup(data, coordinate)
   
-  // 高亮该林分
   highlightStandById(stand.id || stand.xiaoBanCode)
 }
 
@@ -429,13 +369,19 @@ const highlightStandById = (standId) => {
   }
 }
 
-// 半径查询结果回调
 function handleRadiusQueryResult(stands, lon, lat, radius) {
   console.log('半径查询结果:', stands.length, '个林分')
   emit('radius-query-result', stands, lon, lat, radius)
   
-  // 显示成功消息
   const totalVolume = stands.reduce((sum, s) => sum + (s.volumePerHa || 0) * (s.area || 0), 0)
+  
+  // 简单的体积格式化
+  const formatVolume = (v) => {
+    if (!v || v === 0) return '0 m³'
+    if (v >= 10000) return (v / 10000).toFixed(2) + ' 万m³'
+    return v.toFixed(2) + ' m³'
+  }
+  
   ElMessage.success(`找到 ${stands.length} 个林分，总蓄积 ${formatVolume(totalVolume)}`)
 }
 </script>
@@ -453,6 +399,7 @@ function handleRadiusQueryResult(stands, lon, lat, radius) {
   height: 100%;
   background-color: #f0f2f5;
   display: block;
+  min-height: 400px;
 }
 
 .map-error {
@@ -504,5 +451,23 @@ function handleRadiusQueryResult(stands, lon, lat, radius) {
   .map-info {
     display: none;
   }
+}
+
+.filter-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.filter-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.filter-label {
+  font-size: 12px;
+  color: #606266;
+  font-weight: 500;
 }
 </style>
