@@ -2,8 +2,8 @@
 
 [![Vue 3](https://img.shields.io/badge/Vue-3.2+-4FC08D?logo=vue.js)](https://vuejs.org/)
 [![OpenLayers](https://img.shields.io/badge/OpenLayers-10.8-1F6B75?logo=openlayers)](https://openlayers.org/)
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-2.7+-6DB33F?logo=spring)](https://spring.io/)
-[![GeoServer](https://img.shields.io/badge/GeoServer-2.24-0099CC)](http://geoserver.org/)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.0+-6DB33F?logo=spring)](https://spring.io/)
+[![GeoServer](https://img.shields.io/badge/GeoServer-2.26-0099CC)](http://geoserver.org/)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 > 基于 WebGIS 技术的林业资源可视化管理系统，实现林场数据的空间展示、查询分析与统计可视化。
