@@ -11,10 +11,10 @@ import java.util.List;
 @Repository
 public interface TreeMeasurementRepository extends JpaRepository<TreeMeasurement, Integer> {
 
-    // 根据样地ID查询单木
+    // 根据样地ID查询单木（通过关联对象查询）
     List<TreeMeasurement> findByPlotPlotId(Integer plotId);
 
-    // 根据林分ID查询单木
+    // 根据小班编号(stand_id)查询单木（通过关联对象查询）
     List<TreeMeasurement> findByStandStandId(Integer standId);
 
     // 查询大径级林木（胸径大于指定值）
@@ -35,4 +35,5 @@ public interface TreeMeasurementRepository extends JpaRepository<TreeMeasurement
     // 计算样地总蓄积（验证用）
     @Query("SELECT SUM(t.volume) FROM TreeMeasurement t WHERE t.plot.plotId = :plotId")
     Double calculatePlotVolume(@Param("plotId") Integer plotId);
+
 }

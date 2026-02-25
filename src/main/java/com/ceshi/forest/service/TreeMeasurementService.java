@@ -1,4 +1,3 @@
-
 package com.ceshi.forest.service;
 
 import com.ceshi.forest.dto.TreeDTO;
@@ -42,7 +41,7 @@ public class TreeMeasurementService {
                 .collect(Collectors.toList());
     }
 
-    // 根据林分ID获取单木
+    // 根据小班编号(stand_id)获取单木
     public List<TreeDTO> getTreesByStandId(Integer standId) {
         return treeRepository.findByStandStandId(standId).stream()
                 .map(this::convertToDTO)
@@ -80,7 +79,7 @@ public class TreeMeasurementService {
         return stats;
     }
 
-    // 获取林分内的树种统计
+    // 获取小班(stand_id)内的树种统计
     public List<Map<String, Object>> getStandSpeciesStatistics(Integer standId) {
         List<TreeMeasurement> trees = treeRepository.findByStandStandId(standId);
 
@@ -103,22 +102,29 @@ public class TreeMeasurementService {
                 .collect(Collectors.toList());
     }
 
-    // 获取Top N大树（按胸径）
+    // 获取Top N大树
     public List<TreeDTO> getTopTrees(Integer limit) {
-        // 使用PageRequest进行排序和分页
         PageRequest pageRequest = PageRequest.of(0, limit, Sort.by(Sort.Direction.DESC, "dbhAvg"));
         return treeRepository.findAll(pageRequest).stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
 
-    // 转换为DTO
+    // 转换为DTO - 通过关联对象获取ID
     private TreeDTO convertToDTO(TreeMeasurement tree) {
         TreeDTO dto = new TreeDTO();
         dto.setTreeId(tree.getTreeId());
-        dto.setPlotId(tree.getPlot().getPlotId());
-        dto.setStandId(tree.getStand().getStandId());
-        dto.setStandName(tree.getStand().getStandName());
+
+        // 通过关联对象获取plotId（需要判空避免NPE）
+        if (tree.getPlot() != null) {
+            dto.setPlotId(tree.getPlot().getPlotId());
+        }
+
+        // 通过关联对象获取standId（小班编号）
+        if (tree.getStand() != null) {
+            dto.setStandId(tree.getStand().getStandId());
+        }
+
         dto.setTreeNo(tree.getTreeNo());
         dto.setSpecies(tree.getSpecies());
         dto.setSpeciesCode(tree.getSpeciesCode());
@@ -137,4 +143,5 @@ public class TreeMeasurementService {
         dto.setSurveyDate(tree.getSurveyDate() != null ? tree.getSurveyDate().toString() : null);
         return dto;
     }
+
 }

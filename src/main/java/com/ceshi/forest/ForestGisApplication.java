@@ -22,7 +22,7 @@ public class ForestGisApplication {
         System.out.println("  智慧林场GIS平台启动成功！");
         System.out.println("========================================");
         System.out.println("API文档: http://localhost:8081/api/stands/health");
-        System.out.println("地图服务: http://localhost:8081/geoserver/wms");
+        System.out.println("地图服务: http://localhost:8080/geoserver/wms");
         System.out.println("========================================");
     }
 }

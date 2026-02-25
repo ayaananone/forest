@@ -13,7 +13,7 @@ import java.util.Optional;
 public interface ForestStandRepository extends JpaRepository<ForestStand, Integer> {
 
     // 根据小班代码查询
-    Optional<ForestStand> findByXiaoBanCode(String xiaoBanCode);
+    Optional<ForestStand> findByXiaoBanCode(String standID);
 
     // 根据优势树种查询
     List<ForestStand> findByDominantSpecies(String dominantSpecies);
@@ -25,13 +25,14 @@ public interface ForestStandRepository extends JpaRepository<ForestStand, Intege
     List<ForestStand> findByStandAgeGreaterThanEqual(Integer minAge);
 
     // 空间查询：查找指定半径内的林分（使用PostGIS函数）
-    @Query(value = "SELECT * FROM forest_stand WHERE " +
-            "ST_DWithin(geom::geography, ST_SetSRID(ST_MakePoint(:lon, :lat), 4326)::geography, :radiusMeters) " +
-            "ORDER BY ST_Distance(geom::geography, ST_SetSRID(ST_MakePoint(:lon, :lat), 4326)::geography)",
+    @Query(value = "WITH params AS (" +
+            "   SELECT CAST(? AS double precision) as lon, CAST(? AS double precision) as lat, CAST(? AS int) as radius" +
+            ") " +
+            "SELECT fs.* FROM forest_stand fs, params p " +
+            "WHERE ST_DWithin(fs.geom::geography, ST_SetSRID(ST_MakePoint(p.lon, p.lat), 4326)::geography, p.radius) " +
+            "ORDER BY ST_Distance(fs.geom::geography, ST_SetSRID(ST_MakePoint(p.lon, p.lat), 4326)::geography)",
             nativeQuery = true)
-    List<ForestStand> findNearbyStands(@Param("lon") Double lon,
-                                       @Param("lat") Double lat,
-                                       @Param("radiusMeters") Integer radiusMeters);
+    List<ForestStand> findNearbyStands(Double lon, Double lat, Integer radiusMeters);
 
     // 统计查询：按树种分组统计面积和蓄积
     @Query("SELECT s.dominantSpecies as species, " +

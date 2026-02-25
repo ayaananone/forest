@@ -37,7 +37,7 @@ public class ForestStandController {
     public ResponseEntity<List<StandDTO>> getNearbyStands(
             @RequestParam Double lon,
             @RequestParam Double lat,
-            @RequestParam(defaultValue = "1000") Integer radiusMeters) {
+            @RequestParam(defaultValue = "45000") Integer radiusMeters) {
         return ResponseEntity.ok(standService.getNearbyStands(lon, lat, radiusMeters));
     }
 
