@@ -3,12 +3,11 @@ package com.ceshi.forest.service;
 import com.ceshi.forest.dto.StandDTO;
 import com.ceshi.forest.dto.StatisticsDTO;
 import com.ceshi.forest.entity.ForestStand;
-import com.ceshi.forest.repository.ForestStandRepository;
+import com.ceshi.forest.mapper.ForestStandMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -17,55 +16,60 @@ import java.util.stream.Collectors;
 public class ForestStandService {
 
     @Autowired
-    private ForestStandRepository standRepository;
+    private ForestStandMapper standMapper;
 
-    // 获取所有林分
     public List<StandDTO> getAllStands() {
-        return standRepository.findAll().stream()
+        return standMapper.findAll().stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
 
-    // 根据ID获取林分
     public StandDTO getStandById(Integer id) {
-        ForestStand stand = standRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("林分不存在"));
+        ForestStand stand = standMapper.findById(id);
+        if (stand == null) {
+            throw new RuntimeException("林分不存在");
+        }
         return convertToDTO(stand);
     }
 
-    // 空间查询：附近林分
     public List<StandDTO> getNearbyStands(Double lon, Double lat, Integer radiusMeters) {
-        return standRepository.findNearbyStands(lon, lat, radiusMeters).stream()
+        return standMapper.findNearbyStands(lon, lat, radiusMeters).stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
 
-    // 获取高价值林分
     public List<StandDTO> getHighValueStands(Double minVolumePerHa) {
-        return standRepository.findByVolumePerHaGreaterThanOrderByVolumePerHaDesc(minVolumePerHa)
-                .stream()
+        return standMapper.findByVolumePerHaGreaterThan(minVolumePerHa).stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
 
-    // 获取树种统计
     public List<StatisticsDTO> getSpeciesStatistics() {
-        List<Object[]> results = standRepository.getStatisticsBySpecies();
+        List<Map<String, Object>> results = standMapper.getStatisticsBySpecies();
         List<StatisticsDTO> stats = new ArrayList<>();
 
-        for (Object[] row : results) {
+        for (Map<String, Object> row : results) {
             StatisticsDTO dto = new StatisticsDTO();
-            dto.setSpecies((String) row[0]);
-            dto.setStandCount(((Number) row[1]).longValue());
-            dto.setTotalArea(((Number) row[2]).doubleValue());
-            dto.setTotalVolume(((Number) row[3]).doubleValue());
-            dto.setAvgVolumePerHa(((Number) row[4]).doubleValue());
+            dto.setSpecies((String) row.get("species"));
+
+            // 添加空值检查
+            Object standCount = row.get("standCount");
+            dto.setStandCount(standCount != null ? ((Number) standCount).longValue() : 0L);
+
+            Object totalArea = row.get("totalArea");
+            dto.setTotalArea(totalArea != null ? ((Number) totalArea).doubleValue() : 0.0);
+
+            Object totalVolume = row.get("totalVolume");
+            dto.setTotalVolume(totalVolume != null ? ((Number) totalVolume).doubleValue() : 0.0);
+
+            Object avgVolumePerHa = row.get("avgVolumePerHa");
+            dto.setAvgVolumePerHa(avgVolumePerHa != null ? ((Number) avgVolumePerHa).doubleValue() : 0.0);
+
             stats.add(dto);
         }
         return stats;
     }
 
-    // 转换为DTO（用于前端展示）
     private StandDTO convertToDTO(ForestStand stand) {
         StandDTO dto = new StandDTO();
         dto.setStandId(stand.getStandId());

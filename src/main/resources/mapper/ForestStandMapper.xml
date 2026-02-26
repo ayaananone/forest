@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.ceshi.forest.mapper.ForestStandMapper">
+
+    <resultMap id="BaseResultMap" type="com.ceshi.forest.entity.ForestStand">
+        <id column="stand_id" property="standId"/>
+        <result column="zone_id" property="zoneId"/>
+        <result column="lin_ban" property="linBan"/>
+        <result column="xiao_ban" property="xiaoBan"/>
+        <result column="xiao_ban_code" property="xiaoBanCode"/>
+        <result column="stand_name" property="standName"/>
+        <result column="area_ha" property="areaHa"/>
+        <result column="site_type" property="siteType"/>
+        <result column="origin" property="origin"/>
+        <result column="stand_age" property="standAge"/>
+        <result column="canopy_density" property="canopyDensity"/>
+        <result column="avg_height" property="avgHeight"/>
+        <result column="avg_dbh" property="avgDbh"/>
+        <result column="volume_per_ha" property="volumePerHa"/>
+        <result column="total_volume" property="totalVolume"/>
+        <result column="dominant_species" property="dominantSpecies"/>
+        <result column="species_composition" property="speciesComposition"/>
+        <result column="center_lon" property="centerLon"/>
+        <result column="center_lat" property="centerLat"/>
+        <result column="elevation" property="elevation"/>
+        <result column="slope" property="slope"/>
+        <result column="aspect" property="aspect"/>
+        <result column="survey_date" property="surveyDate"/>
+        <result column="surveyor" property="surveyor"/>
+    </resultMap>
+
+    <select id="findAll" resultMap="BaseResultMap">
+        SELECT * FROM forest_stand
+    </select>
+
+    <select id="findById" resultMap="BaseResultMap">
+        SELECT * FROM forest_stand WHERE stand_id = #{id}
+    </select>
+
+    <select id="findByXiaoBanCode" resultMap="BaseResultMap">
+        SELECT * FROM forest_stand WHERE xiao_ban_code = #{code}
+    </select>
+
+    <select id="findByDominantSpecies" resultMap="BaseResultMap">
+        SELECT * FROM forest_stand WHERE dominant_species = #{species}
+    </select>
+
+    <select id="findByVolumePerHaGreaterThan" resultMap="BaseResultMap">
+        SELECT * FROM forest_stand WHERE volume_per_ha > #{minVolume} ORDER BY volume_per_ha DESC
+    </select>
+
+    <select id="findByStandAgeGreaterThanEqual" resultMap="BaseResultMap">
+        SELECT * FROM forest_stand WHERE stand_age >= #{minAge}
+    </select>
+
+    <select id="findNearbyStands" resultMap="BaseResultMap">
+        SELECT * FROM forest_stand
+        WHERE ST_DWithin(geom::geography, ST_SetSRID(ST_MakePoint(#{lon}, #{lat}), 4326)::geography, #{radius})
+        ORDER BY ST_Distance(geom::geography, ST_SetSRID(ST_MakePoint(#{lon}, #{lat}), 4326)::geography)
+    </select>
+
+    <select id="getStatisticsBySpecies" resultType="java.util.HashMap">
+        SELECT
+            dominant_species as "species",
+            CAST(COUNT(*) as INTEGER) as "standCount",
+            COALESCE(SUM(area_ha), 0.0) as "totalArea",
+            COALESCE(SUM(total_volume), 0.0) as "totalVolume",
+            COALESCE(AVG(volume_per_ha), 0.0) as "avgVolumePerHa"
+        FROM forest_stand
+        GROUP BY dominant_species
+    </select>
+
+    <select id="findInExtent" resultMap="BaseResultMap">
+        SELECT * FROM forest_stand
+        WHERE center_lon BETWEEN #{minLon} AND #{maxLon}
+          AND center_lat BETWEEN #{minLat} AND #{maxLat}
+    </select>
+
+</mapper>

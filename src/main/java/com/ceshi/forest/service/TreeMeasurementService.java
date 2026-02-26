@@ -2,10 +2,8 @@ package com.ceshi.forest.service;
 
 import com.ceshi.forest.dto.TreeDTO;
 import com.ceshi.forest.entity.TreeMeasurement;
-import com.ceshi.forest.repository.TreeMeasurementRepository;
+import com.ceshi.forest.mapper.TreeMeasurementMapper;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -18,70 +16,64 @@ import java.util.stream.Collectors;
 public class TreeMeasurementService {
 
     @Autowired
-    private TreeMeasurementRepository treeRepository;
+    private TreeMeasurementMapper treeMapper;
 
-    // 获取所有单木
     public List<TreeDTO> getAllTrees() {
-        return treeRepository.findAll().stream()
+        return treeMapper.findAll().stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
 
-    // 根据ID获取单木
     public TreeDTO getTreeById(Integer id) {
-        TreeMeasurement tree = treeRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("单木记录不存在"));
+        TreeMeasurement tree = treeMapper.findById(id);
+        if (tree == null) {
+            throw new RuntimeException("单木记录不存在");
+        }
         return convertToDTO(tree);
     }
 
-    // 根据样地ID获取单木
     public List<TreeDTO> getTreesByPlotId(Integer plotId) {
-        return treeRepository.findByPlotPlotId(plotId).stream()
+        return treeMapper.findByPlotId(plotId).stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
 
-    // 根据小班编号(stand_id)获取单木
     public List<TreeDTO> getTreesByStandId(Integer standId) {
-        return treeRepository.findByStandStandId(standId).stream()
+        return treeMapper.findByStandId(standId).stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
 
-    // 获取大径级林木
     public List<TreeDTO> getLargeTrees(Double minDbh) {
-        return treeRepository.findByDbhAvgGreaterThanEqual(minDbh).stream()
+        return treeMapper.findByDbhAvgGreaterThanEqual(minDbh).stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
 
-    // 按树种查询
     public List<TreeDTO> getTreesBySpecies(String species) {
-        return treeRepository.findBySpecies(species).stream()
+        return treeMapper.findBySpecies(species).stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
 
-    // 获取全局树种统计
     public List<Map<String, Object>> getSpeciesStatistics() {
-        List<Object[]> results = treeRepository.getStatisticsBySpecies();
+        List<Map<String, Object>> results = treeMapper.getStatisticsBySpecies();
         List<Map<String, Object>> stats = new ArrayList<>();
 
-        for (Object[] row : results) {
+        for (Map<String, Object> row : results) {
             Map<String, Object> map = new HashMap<>();
-            map.put("species", row[0]);
-            map.put("treeCount", row[1]);
-            map.put("totalVolume", row[2]);
-            map.put("avgDbh", row[3]);
-            map.put("avgHeight", row[4]);
+            map.put("species", row.get("species"));
+            map.put("treeCount", row.get("treeCount") != null ? row.get("treeCount") : 0);
+            map.put("totalVolume", row.get("totalVolume") != null ? row.get("totalVolume") : 0.0);
+            map.put("avgDbh", row.get("avgDbh") != null ? row.get("avgDbh") : 0.0);
+            map.put("avgHeight", row.get("avgHeight") != null ? row.get("avgHeight") : 0.0);
             stats.add(map);
         }
         return stats;
     }
 
-    // 获取小班(stand_id)内的树种统计
     public List<Map<String, Object>> getStandSpeciesStatistics(Integer standId) {
-        List<TreeMeasurement> trees = treeRepository.findByStandStandId(standId);
+        List<TreeMeasurement> trees = treeMapper.findByStandId(standId);
 
         Map<String, List<TreeMeasurement>> grouped = trees.stream()
                 .collect(Collectors.groupingBy(TreeMeasurement::getSpecies));
@@ -102,29 +94,19 @@ public class TreeMeasurementService {
                 .collect(Collectors.toList());
     }
 
-    // 获取Top N大树
     public List<TreeDTO> getTopTrees(Integer limit) {
-        PageRequest pageRequest = PageRequest.of(0, limit, Sort.by(Sort.Direction.DESC, "dbhAvg"));
-        return treeRepository.findAll(pageRequest).stream()
+        return treeMapper.findAll().stream()
+                .sorted((a, b) -> b.getDbhAvg().compareTo(a.getDbhAvg()))
+                .limit(limit)
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
 
-    // 转换为DTO - 通过关联对象获取ID
     private TreeDTO convertToDTO(TreeMeasurement tree) {
         TreeDTO dto = new TreeDTO();
         dto.setTreeId(tree.getTreeId());
-
-        // 通过关联对象获取plotId（需要判空避免NPE）
-        if (tree.getPlot() != null) {
-            dto.setPlotId(tree.getPlot().getPlotId());
-        }
-
-        // 通过关联对象获取standId（小班编号）
-        if (tree.getStand() != null) {
-            dto.setStandId(tree.getStand().getStandId());
-        }
-
+        dto.setPlotId(tree.getPlotId());
+        dto.setStandId(tree.getStandId());
         dto.setTreeNo(tree.getTreeNo());
         dto.setSpecies(tree.getSpecies());
         dto.setSpeciesCode(tree.getSpeciesCode());
@@ -143,5 +125,4 @@ public class TreeMeasurementService {
         dto.setSurveyDate(tree.getSurveyDate() != null ? tree.getSurveyDate().toString() : null);
         return dto;
     }
-
 }

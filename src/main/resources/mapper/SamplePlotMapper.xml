@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.ceshi.forest.mapper.SamplePlotMapper">
+
+    <resultMap id="BaseResultMap" type="com.ceshi.forest.entity.SamplePlot">
+        <id column="plot_id" property="plotId"/>
+        <result column="stand_id" property="standId"/>
+        <result column="plot_no" property="plotNo"/>
+        <result column="plot_area_ha" property="plotAreaHa"/>
+        <result column="plot_area_m2" property="plotAreaM2"/>
+        <result column="survey_date" property="surveyDate"/>
+        <result column="longitude_dd" property="longitudeDd"/>
+        <result column="latitude_dd" property="latitudeDd"/>
+        <result column="elevation" property="elevation"/>
+        <result column="slope" property="slope"/>
+        <result column="aspect" property="aspect"/>
+        <result column="total_trees" property="totalTrees"/>
+        <result column="avg_dbh" property="avgDbh"/>
+        <result column="avg_height" property="avgHeight"/>
+        <result column="canopy_density" property="canopyDensity"/>
+        <result column="total_volume" property="totalVolume"/>
+        <result column="volume_per_ha" property="volumePerHa"/>
+        <result column="surveyor" property="surveyor"/>
+    </resultMap>
+
+    <select id="findAll" resultMap="BaseResultMap">
+        SELECT * FROM sample_plot
+    </select>
+
+    <select id="findById" resultMap="BaseResultMap">
+        SELECT * FROM sample_plot WHERE plot_id = #{id}
+    </select>
+
+    <select id="findByStandId" resultMap="BaseResultMap">
+        SELECT * FROM sample_plot WHERE stand_id = #{standId}
+    </select>
+
+    <select id="findByVolumePerHaGreaterThan" resultMap="BaseResultMap">
+        SELECT * FROM sample_plot WHERE volume_per_ha > #{minVolume}
+    </select>
+
+    <select id="getPlotStatisticsByStandId" resultType="java.lang.Object">
+        SELECT AVG(volume_per_ha), SUM(total_volume), COUNT(*)
+        FROM sample_plot
+        WHERE stand_id = #{standId}
+    </select>
+
+</mapper>
