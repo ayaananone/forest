@@ -84,6 +84,12 @@ dependencies {
     // ========== Test ==========
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    // Caffeine 本地缓存
+    implementation 'com.github.ben-manes.caffeine:caffeine:3.1.8'
+
+    // Spring Boot Redis Starter
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 }
 
 tasks.named('test') {
