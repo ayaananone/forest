@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.ceshi.forest.mapper.TreeMeasurementMapper">
+
+    <resultMap id="BaseResultMap" type="com.ceshi.forest.entity.TreeMeasurement">
+        <id column="tree_id" property="treeId"/>
+        <result column="plot_id" property="plotId"/>
+        <result column="stand_id" property="standId"/>
+        <result column="tree_no" property="treeNo"/>
+        <result column="species" property="species"/>
+        <result column="species_code" property="speciesCode"/>
+        <result column="dbh_direction_1" property="dbhDirection1"/>
+        <result column="dbh_direction_2" property="dbhDirection2"/>
+        <result column="dbh_avg" property="dbhAvg"/>
+        <result column="tree_height" property="treeHeight"/>
+        <result column="diameter_half_height" property="diameterHalfHeight"/>
+        <result column="q2" property="q2"/>
+        <result column="f1" property="f1"/>
+        <result column="basal_area" property="basalArea"/>
+        <result column="volume" property="volume"/>
+        <result column="crown_width" property="crownWidth"/>
+        <result column="tree_quality" property="treeQuality"/>
+        <result column="health_status" property="healthStatus"/>
+        <result column="survey_date" property="surveyDate"/>
+    </resultMap>
+
+    <select id="findAll" resultMap="BaseResultMap">
+        SELECT * FROM tree_measurement
+    </select>
+
+    <select id="findById" resultMap="BaseResultMap">
+        SELECT * FROM tree_measurement WHERE tree_id = #{id}
+    </select>
+
+    <select id="findByPlotId" resultMap="BaseResultMap">
+        SELECT * FROM tree_measurement WHERE plot_id = #{plotId}
+    </select>
+
+    <select id="findByStandId" resultMap="BaseResultMap">
+        SELECT * FROM tree_measurement WHERE stand_id = #{standId}
+    </select>
+
+    <select id="findByDbhAvgGreaterThanEqual" resultMap="BaseResultMap">
+        SELECT * FROM tree_measurement WHERE dbh_avg >= #{minDbh}
+    </select>
+
+    <select id="findBySpecies" resultMap="BaseResultMap">
+        SELECT * FROM tree_measurement WHERE species = #{species}
+    </select>
+
+    <select id="getStatisticsBySpecies" resultType="java.util.HashMap">
+        SELECT
+            species,
+            COUNT(*) as treeCount,
+            SUM(volume) as totalVolume,
+            AVG(dbh_avg) as avgDbh,
+            AVG(tree_height) as avgHeight
+        FROM tree_measurement
+        GROUP BY species
+    </select>
+
+    <select id="calculatePlotVolume" resultType="java.lang.Double">
+        SELECT SUM(volume) FROM tree_measurement WHERE plot_id = #{plotId}
+    </select>
+
+</mapper>

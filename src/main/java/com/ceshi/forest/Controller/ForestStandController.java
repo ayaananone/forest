@@ -1,5 +1,5 @@
 
-package com.ceshi.forest.Controller;
+package com.ceshi.forest.controller;
 
 import com.ceshi.forest.dto.StandDTO;
 import com.ceshi.forest.dto.StatisticsDTO;

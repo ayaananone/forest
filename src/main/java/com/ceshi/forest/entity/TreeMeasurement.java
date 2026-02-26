@@ -1,30 +1,13 @@
 package com.ceshi.forest.entity;
 
-import jakarta.persistence.*;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.ToString;
 import java.time.LocalDate;
 
 @Data
-@Entity
-@Table(name = "tree_measurement")
-@EqualsAndHashCode(exclude = {"plot", "stand"})
-@ToString(exclude = {"plot", "stand"})
 public class TreeMeasurement {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer treeId;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "plot_id")
-    private SamplePlot plot;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "stand_id")
-    private ForestStand stand;
-
+    private Integer plotId;
+    private Integer standId;
     private Integer treeNo;
     private String species;
     private String speciesCode;
