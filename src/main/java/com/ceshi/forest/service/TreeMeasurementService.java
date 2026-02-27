@@ -31,6 +31,12 @@ public interface TreeMeasurementService {
     List<TreeDTO> getTreesByStandId(Integer standId);
 
     /**
+     * 根据林分ID（字符串）获取单木列表
+     * 用于支持非数字格式的林分ID（如 "02-05"）
+     */
+    List<TreeDTO> getTreesByStandIdString(String standId);
+
+    /**
      * 获取大径级林木
      */
     List<TreeDTO> getLargeTrees(Double minDbh);

@@ -37,6 +37,7 @@ public class StandCacheServiceImpl implements StandCacheService {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public List<StandDTO> getAllStands() {
         String key = KEY_PREFIX + "all";
 
@@ -47,6 +48,7 @@ public class StandCacheServiceImpl implements StandCacheService {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public List<StatisticsDTO> getSpeciesStatistics() {
         String key = KEY_PREFIX + "statistics:species";
 
@@ -63,6 +65,7 @@ public class StandCacheServiceImpl implements StandCacheService {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public List<StandDTO> getNearbyStands(Double lon, Double lat, Integer radiusMeters) {
         // 空间查询结果变化大，只缓存短时间
         String key = String.format("%snearby:%.4f:%.4f:%d", KEY_PREFIX, lon, lat, radiusMeters);
@@ -79,6 +82,7 @@ public class StandCacheServiceImpl implements StandCacheService {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public List<StandDTO> getHighValueStands(Double minVolumePerHa) {
         // 高价值林分查询，使用参数化缓存键
         String key = String.format("%shigh-value:%.2f", KEY_PREFIX, minVolumePerHa);

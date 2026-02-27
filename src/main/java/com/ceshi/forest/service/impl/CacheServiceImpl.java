@@ -125,11 +125,4 @@ public class CacheServiceImpl implements CacheService {
             logger.info("批量删除缓存，模式: {}, 数量: {}", pattern, keys.size());
         }
     }
-
-    /**
-     * 获取本地缓存统计
-     */
-    public String getLocalCacheStats() {
-        return localCache.stats().toString();
-    }
 }
