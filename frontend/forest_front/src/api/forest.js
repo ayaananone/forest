@@ -1,4 +1,4 @@
-// forest.js - 完整修复版
+// forest.js
 
 /**
  * 林场数据API
@@ -132,97 +132,6 @@ export async function fetchStandDetail(standId) {
         throw error
     }
 }
-/**
- * 获取小班内所有单木详细数据
- */
-/*
-export async function fetchStandTrees(standId) {
-    try {
-        const response = await fetch(`${BASE_URL}/stands/${standId}/trees`)
-        if (!response.ok) throw new Error(`HTTP ${response.status}`)
-        const data = await response.json()
-        console.log('fetchStandTrees 原始数据:', data.length, '条')  // 调试
-        return transformTrees(data)
-    } catch (error) {
-        console.error('获取单木数据失败:', error)
-        throw error
-    }
-}*/
-
-/**
- * 转换单木数据
- */
-/*
-function transformTrees(backendDataArray) {
-    if (!Array.isArray(backendDataArray)) {
-        console.warn('transformTrees: 输入不是数组', backendDataArray)
-        return []
-    }
-    
-    return backendDataArray.map((item, index) => ({
-        id: item.id || item.treeId || index + 1,
-        species: item.species || item.treeSpecies || '-',
-        dbhAvg: item.dbhAvg || item.dbh_avg || 0,           // 胸径
-        treeHeight: item.treeHeight || item.tree_height || 0, // 树高
-        diameterHalfHeight: item.diameterHalfHeight || item.diameter_half_height || 0, // 半高直径
-        q2: item.q2 || 0,
-        f1: item.f1 || 0,
-        basalArea: item.basalArea || item.basal_area || 0,   // 断面积
-        volume: item.volume || 0,                            // 材积
-        crownWidth: item.crownWidth || item.crown_width || 0  // 冠幅
-    }))
-}*/
-
-/**
- * 导出小班详细数据为 CSV
- */
-/*
-export function exportStandTrees(xiaoBanCode, data) {
-    if (!data || data.length === 0) {
-        console.warn('没有数据可导出')
-        return
-    }
-    
-    const headers = [
-        '序号', '树种', '胸径(cm)', '树高(m)', '半高直径(cm)', 
-        'q2', 'f1', '断面积(m²)', '材积(m³)', '冠幅(m)'
-    ]
-    
-    const rows = data.map((item, index) => [
-        index + 1,
-        item.species,
-        item.dbhAvg,
-        item.treeHeight,
-        item.diameterHalfHeight,
-        item.q2,
-        item.f1,
-        item.basalArea,
-        item.volume,
-        item.crownWidth
-    ])
-    
-    const csvContent = [
-        ['小班编号:', xiaoBanCode].join(','),
-        ['导出时间:', new Date().toLocaleString()].join(','),
-        ['总株数:', data.length + ' 株'].join(','),
-        [],
-        headers.join(','),
-        ...rows.map(row => row.join(','))
-    ].join('\n')
-    
-    const BOM = '\uFEFF'
-    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' })
-    
-    const link = document.createElement('a')
-    const url = URL.createObjectURL(blob)
-    link.href = url
-    link.download = `小班_${xiaoBanCode}_单木数据_${new Date().toLocaleDateString()}.csv`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
-}
-*/
 /**
  * WFS查询林分几何（GeoServer）
  */

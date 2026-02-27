@@ -97,9 +97,9 @@ dependencies {
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
 
     // Apache POI - Excel 导出
-    implementation 'org.apache.poi:poi:5.2.3'
-    implementation 'org.apache.poi:poi-ooxml:5.2.3'
-    implementation 'org.apache.poi:poi-ooxml-lite:5.2.3'
+    implementation 'org.apache.poi:poi:5.4.0'
+    implementation 'org.apache.poi:poi-ooxml:5.4.0'
+    implementation 'org.apache.poi:poi-ooxml-lite:5.4.0'
 }
 
 tasks.named('test') {

@@ -1,5 +1,5 @@
 /**
- * 图层管理组合式函数 - 修复 WMS 加载问题
+ * 图层管理组合式函数 
  */
 import { ref } from 'vue'
 import { Tile as TileLayer, Vector as VectorLayer, Heatmap as HeatmapLayer } from 'ol/layer'
@@ -576,7 +576,7 @@ export function useLayers(map) {
         filterMarkers(filterObj || { species: null, origin: null, minVolume: null })
     }
 
-    // 矢量标记筛选（修复：支持多条件组合）
+    // 矢量标记筛选
     const filterMarkers = (filters) => {
         const markerLayer = getLayerByName('stands_markers')
         if (!markerLayer) return

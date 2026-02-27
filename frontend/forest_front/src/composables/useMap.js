@@ -94,20 +94,18 @@ export function useMap(targetId, options = {}) {
             map.value = new Map({
                 target: container,
                 view: view.value,
-                controls: defaultControls().extend([
+                controls: [
+                    // 比例尺
                     new ScaleLine({ units: 'metric' }),
+                    // 全屏
                     new FullScreen(),
-                    new ZoomSlider(),
+                    // 鼠标位置
                     new MousePosition({
                         coordinateFormat: createStringXY(4),
                         projection: 'EPSG:4326',
                         className: 'custom-mouse-position'
-                    }),
-                    new OverviewMap({
-                        collapsed: true,
-                        layers: [new TileLayer({ source: baseSource })]
                     })
-                ]),
+                ],
                 interactions: defaultInteractions().extend([
                     new DragRotateAndZoom()
                 ])
@@ -228,37 +226,31 @@ export function useMap(targetId, options = {}) {
         return null
     }
 
-    // 显示林场详细信息弹窗（修复：不移除视图，只显示弹窗和高亮）
+    // 显示林场详细信息弹窗
     const showStandDetailPopup = (feature, coordinate) => {
         const props = feature.getProperties()
         console.log('showStandDetailPopup props:', props)
+
+        const standId = props.stand_id || props.standId || props.id
+        // 小班编码仅用于显示
+        const xiaoBanCode = props.xiao_ban_code || props.xiaoBanCode || '-'
         
-        // 尝试多种可能的 ID 字段名
-        const standId = props.id || props.zone_id || props.stand_id || props.objectid || props.OBJECTID || props.fid || props.xiao_ban_code || 'unknown'
-        
-        // 计算总面积（公顷）
         const area = parseFloat(props.area) || parseFloat(props.area_ha) || parseFloat(props.areaHa) || 0
-        
-        // 计算每公顷蓄积量
         const volumePerHa = parseFloat(props.volume_per_ha) || parseFloat(props.volumePerHa) || parseFloat(props.volume) || 0
-        
-        // 计算总蓄积量 = 每公顷蓄积 × 面积
         const totalVolume = volumePerHa * area
         
         const data = {
             type: 'stand_detail',
             id: standId,
+            xiaoBanCode: xiaoBanCode,
             name: props.stand_name || props.standName || props.name || '未命名林分',
-            standNo: props.xiao_ban_code || props.xiaoBanCode || props.stand_no || '-',
+            // 显示用小班编码，但下载用 standId
+            standNo: xiaoBanCode,
             species: props.dominant_species || props.dominantSpecies || props.species || '未知',
             origin: props.origin || props.forest_origin || '未知',
-            
-            // 关键数据
             area: Math.round(area * 100) / 100,
             volumePerHa: Math.round(volumePerHa * 100) / 100,
             totalVolume: Math.round(totalVolume * 100) / 100,
-            
-            // 其他信息
             age: props.stand_age || props.standAge || props.age || '-',
             density: props.canopy_density || props.canopyDensity || props.density || '-',
             aspect: props.aspect || '未知',
@@ -271,27 +263,13 @@ export function useMap(targetId, options = {}) {
         // 显示弹窗
         showPopup(data, coordinate)
         
-        // 自动居中显示（关键修改）
-        if (view.value && feature.getGeometry) {
-            const geom = feature.getGeometry()
-            const center = geom.getCoordinates()
-            
-            console.log('自动居中到坐标:', center)
-            
-            // 平滑移动到中心，保持当前缩放级别
-            view.value.animate({
-                center: center,
-                duration: 500
-            })
-        }
-        
         // 高亮该林场
-        if (standId !== 'unknown') {
+        if (standId) {
             highlightStand(feature)
         }
     }
 
-    // 高亮林场（修复：不移除视图，只添加高亮圈）
+    // 高亮林场
     const highlightStand = (featureOrId) => {
         const highlightSource = getLayerByName('highlight')?.getSource()
         if (!highlightSource) return
