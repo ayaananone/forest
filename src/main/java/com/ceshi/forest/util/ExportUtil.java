@@ -4,6 +4,8 @@ import com.ceshi.forest.dto.TreeDTO;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import lombok.Getter;
+import lombok.Setter;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.slf4j.Logger;
@@ -278,22 +280,12 @@ public class ExportUtil {
         return value != null ? String.format("%.2f", value) : "";
     }
 
+    @Setter
+    @Getter
     public static class ExportResult {
         private Integer standId;
         private Integer totalCount;
         private List<TreeDTO> trees;
         private String exportTime;
-
-        public Integer getStandId() { return standId; }
-        public void setStandId(Integer standId) { this.standId = standId; }
-
-        public Integer getTotalCount() { return totalCount; }
-        public void setTotalCount(Integer totalCount) { this.totalCount = totalCount; }
-
-        public List<TreeDTO> getTrees() { return trees; }
-        public void setTrees(List<TreeDTO> trees) { this.trees = trees; }
-
-        public String getExportTime() { return exportTime; }
-        public void setExportTime(String exportTime) { this.exportTime = exportTime; }
     }
 }
