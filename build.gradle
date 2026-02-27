@@ -18,7 +18,8 @@ configurations {
     compileOnly {
         extendsFrom annotationProcessor
     }
-    all {
+    // 修复：使用 configureEach 替代 all
+    configureEach {
         exclude group: 'javax.media', module: 'jai_core'
         exclude group: 'com.sun.media', module: 'jai_codec'
     }
@@ -41,6 +42,7 @@ dependencies {
     // ========== Spring Boot Starters ==========
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.boot:spring-boot-starter-cache'
 
     // ========== MyBatis ==========
     implementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter:4.0.1'
@@ -90,6 +92,14 @@ dependencies {
 
     // Spring Boot Redis Starter
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+
+    // Jackson JSR310 模块，用于处理 Java 8 日期时间类型
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
+
+    // Apache POI - Excel 导出
+    implementation 'org.apache.poi:poi:5.2.3'
+    implementation 'org.apache.poi:poi-ooxml:5.2.3'
+    implementation 'org.apache.poi:poi-ooxml-lite:5.2.3'
 }
 
 tasks.named('test') {

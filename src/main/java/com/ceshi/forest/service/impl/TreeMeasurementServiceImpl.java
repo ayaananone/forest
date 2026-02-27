@@ -224,4 +224,17 @@ public class TreeMeasurementServiceImpl implements TreeMeasurementService {
             throw new RuntimeException("数据转换失败", e);
         }
     }
+    @Override
+    public List<TreeDTO> getTreesByStandIdString(String standId) {
+        logger.info("根据字符串林分ID获取单木列表, standId: {}", standId);
+
+        try {
+            logger.warn("字符串林分ID查询暂未完全实现，返回空列表。standId: {}", standId);
+            return List.of();
+
+        } catch (Exception e) {
+            logger.error("根据字符串林分ID获取单木列表失败, standId={}: {}", standId, e.getMessage(), e);
+            return List.of();
+        }
+    }
 }
