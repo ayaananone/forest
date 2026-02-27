@@ -201,12 +201,8 @@ public class TreeMeasurementServiceImpl implements TreeMeasurementService {
             TreeDTO dto = new TreeDTO();
             dto.setTreeId(tree.getTreeId());
             dto.setPlotId(tree.getPlotId());
-            dto.setStandId(tree.getStandId());
             dto.setTreeNo(tree.getTreeNo());
             dto.setSpecies(tree.getSpecies());
-            dto.setSpeciesCode(tree.getSpeciesCode());
-            dto.setDbhDirection1(tree.getDbhDirection1());
-            dto.setDbhDirection2(tree.getDbhDirection2());
             dto.setDbhAvg(tree.getDbhAvg());
             dto.setTreeHeight(tree.getTreeHeight());
             dto.setDiameterHalfHeight(tree.getDiameterHalfHeight());
@@ -215,9 +211,13 @@ public class TreeMeasurementServiceImpl implements TreeMeasurementService {
             dto.setBasalArea(tree.getBasalArea());
             dto.setVolume(tree.getVolume());
             dto.setCrownWidth(tree.getCrownWidth());
-            dto.setTreeQuality(tree.getTreeQuality());
+            dto.setDbhDirection1(tree.getDbhDirection1());
+            dto.setDbhDirection2(tree.getDbhDirection2());
             dto.setHealthStatus(tree.getHealthStatus());
+            dto.setSpeciesCode(tree.getSpeciesCode());
             dto.setSurveyDate(tree.getSurveyDate() != null ? tree.getSurveyDate().toString() : null);
+            dto.setTreeQuality(tree.getTreeQuality());
+            dto.setStandId(tree.getStandId());
             return dto;
         } catch (Exception e) {
             logger.error("转换单木DTO失败, treeId={}: {}", tree.getTreeId(), e.getMessage());

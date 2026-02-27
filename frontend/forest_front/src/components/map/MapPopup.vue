@@ -58,11 +58,30 @@
         </el-descriptions>
       </div>
       
-      <!-- 修改：添加下载按钮，移除查看详情按钮 -->
+      <!-- 下载按钮组 - 支持 CSV、Excel、JSON 三种格式 -->
       <div class="popup-footer">
-        <el-button type="success" size="small" @click="handleDownload">
+        <el-dropdown 
+          split-button 
+          type="success" 
+          size="small" 
+          @click="handleDownload('csv')"
+          :disabled="!content?.id && !content?.standNo"
+        >
           <el-icon><Download /></el-icon> 下载单木数据
-        </el-button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item @click="handleDownload('csv')">
+                <el-icon><Document /></el-icon> CSV 格式
+              </el-dropdown-item>
+              <el-dropdown-item @click="handleDownload('excel')">
+                <el-icon><Grid /></el-icon> Excel 格式
+              </el-dropdown-item>
+              <el-dropdown-item @click="handleDownload('json')">
+                <el-icon><DataLine /></el-icon> JSON 格式
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
       </div>
     </div>
     
@@ -107,7 +126,10 @@ import {
   Loading, 
   CircleClose, 
   Search,
-  Download
+  Download,
+  Document,
+  Grid,
+  DataLine
 } from '@element-plus/icons-vue'
 import { SPECIES_COLORS } from '@/config'
 import { ElMessage } from 'element-plus'
@@ -123,41 +145,53 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['close', 'zoom-to', 'download'])
+const emit = defineEmits(['close', 'zoom-to'])
 
 const handleClose = () => {
   emit('close')
 }
 
-// 新增：处理下载按钮点击
-const handleDownload = async () => {
-  if (!props.content?.id) {
+/**
+ * 处理下载按钮点击 - 支持 CSV、Excel、JSON 三种格式
+ * @param {string} format - 导出格式：csv、excel、json
+ */
+const handleDownload = async (format = 'csv') => {
+  // 获取林分ID，优先使用standNo（小班编码，如"02-05"），其次使用id
+  const standId = props.content?.id
+  
+  if (!standId) {
     ElMessage.warning('无效的小班ID')
     return
   }
   
-  const standId = props.content.id
+  // 确保转换为字符串并使用encodeURIComponent编码
+  const standIdStr = String(standId).trim()
   
   try {
-    ElMessage.info('正在下载单木数据...')
+    ElMessage.info(`正在下载单木数据(${format.toUpperCase()}格式)...`)
     
-    const response = await fetch(`/api/trees/stand/csv?standId=${standId}`, {
-      method: 'GET',
-      headers: {
-        'Accept': 'text/csv,application/octet-stream'
+    // 使用新的端点 /api/trees/stand/export
+    const response = await fetch(
+      `/api/trees/stand/export?standId=${encodeURIComponent(standIdStr)}&format=${format}`, 
+      {
+        method: 'GET',
+        headers: {
+          'Accept': '*/*'
+        }
       }
-    })
+    )
     
     if (!response.ok) {
       if (response.status === 404) {
         throw new Error('该小班暂无单木数据')
       }
-      throw new Error(`下载失败: HTTP ${response.status}`)
+      const errorText = await response.text()
+      throw new Error(`下载失败: ${errorText || response.statusText}`)
     }
     
     // 获取文件名
     const contentDisposition = response.headers.get('content-disposition')
-    let filename = `小班_${standId}_单木数据.csv`
+    let filename = `小班_${standIdStr}_单木数据.${format === 'excel' ? 'xlsx' : format}`
     if (contentDisposition) {
       const filenameMatch = contentDisposition.match(/filename\*?=(?:UTF-8'')?([^;]+)/i)
       if (filenameMatch) {
@@ -176,7 +210,7 @@ const handleDownload = async () => {
     document.body.removeChild(link)
     window.URL.revokeObjectURL(url)
     
-    ElMessage.success(`小班 ${standId} 的单木数据下载成功`)
+    ElMessage.success(`小班 ${standIdStr} 的单木数据下载成功`)
     
   } catch (error) {
     console.error('下载单木数据失败:', error)
@@ -241,6 +275,7 @@ const formatVolume = (volume) => {
   border-top: 1px solid #ebeef5;
   background: #fafafa;
   border-radius: 0 0 12px 12px;
+  justify-content: center;
 }
 
 .highlight-value {
@@ -295,5 +330,12 @@ const formatVolume = (volume) => {
 .popup-radius .radius-info strong {
   color: #2E7D32;
   font-size: 14px;
+}
+
+/* 下拉菜单样式 */
+:deep(.el-dropdown-menu__item) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 </style>

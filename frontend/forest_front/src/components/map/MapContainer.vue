@@ -81,7 +81,7 @@
             </el-select>
           </el-form-item>
           
-          <!-- 最小蓄积 - 修复：移除 label 属性，使用自定义标签 -->
+          <!-- 最小蓄积  -->
           <div class="filter-item">
             <span class="filter-label">最小蓄积</span>
             <el-slider
