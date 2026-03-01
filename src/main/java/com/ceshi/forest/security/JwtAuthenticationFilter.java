@@ -8,15 +8,17 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.Collections;
+import java.util.List;
 
 @Slf4j
 @Component
@@ -24,28 +26,21 @@ import java.io.IOException;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
-    private final UserDetailsService userDetailsService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
 
-        // 获取 JWT 令牌
         final String authHeader = request.getHeader("Authorization");
-        final String jwt;
-        final String username;
 
-        // 检查 Authorization 头
         if (!StringUtils.hasText(authHeader) || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        // 提取令牌
-        jwt = authHeader.substring(7);
+        final String jwt = authHeader.substring(7);
 
-        // 验证令牌
         if (!jwtUtil.validateToken(jwt)) {
             log.warn("无效的JWT令牌");
             filterChain.doFilter(request, response);
@@ -53,30 +48,36 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         try {
-            username = jwtUtil.getUsernameFromToken(jwt);
-        } catch (Exception e) {
-            log.error("从令牌解析用户名失败: {}", e.getMessage());
-            filterChain.doFilter(request, response);
-            return;
-        }
+            final String username = jwtUtil.getUsernameFromToken(jwt);
+            final String role = jwtUtil.getRoleFromToken(jwt);
 
-        // 检查是否已认证
-        if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
+            // 关键修复：避免重复添加 ROLE_ 前缀
+            final String authority = role.startsWith("ROLE_") ? role : "ROLE_" + role;
 
-            // 验证令牌是否有效且未过期
-            if (jwtUtil.validateToken(jwt) && !jwtUtil.isTokenExpired(jwt)) {
+            log.info("Token解析 - 用户: {}, 角色: {}, 权限: {}", username, role, authority);
+
+            if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                List<SimpleGrantedAuthority> authorities = Collections.singletonList(
+                        new SimpleGrantedAuthority(authority)
+                );
+
+                UserDetails userDetails = new org.springframework.security.core.userdetails.User(
+                        username, "", authorities
+                );
+
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                         userDetails,
                         null,
-                        userDetails.getAuthorities()
+                        authorities
                 );
                 authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
-                // 设置安全上下文
                 SecurityContextHolder.getContext().setAuthentication(authToken);
-                log.debug("用户 {} 认证成功", username);
+                log.info("用户 {} 认证成功，权限: {}", username, authorities);
             }
+
+        } catch (Exception e) {
+            log.error("认证失败: {}", e.getMessage());
         }
 
         filterChain.doFilter(request, response);

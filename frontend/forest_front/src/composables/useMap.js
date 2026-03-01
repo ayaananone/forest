@@ -304,7 +304,7 @@ export function useMap(targetId, options = {}) {
             return
         }
         
-        // 如果传入的是 ID（兼容旧代码）
+        // 如果传入的是 ID
         const standId = featureOrId
         
         // 从标记图层获取

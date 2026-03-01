@@ -6,6 +6,7 @@ import com.ceshi.forest.dto.StatisticsDTO;
 import com.ceshi.forest.service.StandCacheService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -73,5 +74,13 @@ public class ForestStandController {
         status.put("service", "forest-stand-service");
         status.put("cache", "enabled");
         return ResponseEntity.ok(status);
+    }
+
+    @GetMapping("/test")
+    public String testAuth(Authentication auth) {
+        return "当前用户: " + auth.getName()
+                + "\n权限: " + auth.getAuthorities()
+                + "\n是否ADMIN: " + auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
     }
 }

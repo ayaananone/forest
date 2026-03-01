@@ -43,10 +43,22 @@ public class SecurityConfig {
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 .authorizeHttpRequests(auth -> auth
+                        // 公开接口（无需认证）
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/geoserver/**").permitAll()
                         .requestMatchers("/api/trees/stand/export").permitAll()
+
+                        // 林分数据接口 - 允许 ADMIN 和 OPERATOR 访问
+                        .requestMatchers("/api/stands/**").hasAnyRole("ADMIN", "OPERATOR", "USER")
+                        .requestMatchers("/api/forest/**").hasAnyRole("ADMIN", "OPERATOR", "USER")
+
+                        // 管理员专用接口
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/users/**").hasRole("ADMIN")
+
+                        // 其他所有 /api/** 接口只需登录（不限制角色）
                         .requestMatchers("/api/**").authenticated()
+
                         .anyRequest().permitAll()
                 )
                 .authenticationProvider(authenticationProvider())
@@ -57,7 +69,6 @@ public class SecurityConfig {
 
     @Bean
     public AuthenticationProvider authenticationProvider() {
-        // Spring Security 6.2+ 需要使用有参构造器
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider(userDetailsService);
         authProvider.setPasswordEncoder(passwordEncoder());
         return authProvider;
