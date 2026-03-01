@@ -10,6 +10,7 @@ import { Style, Stroke, Fill, Text, Circle as CircleStyle } from 'ol/style'
 import Feature from 'ol/Feature'
 import Point from 'ol/geom/Point'
 import Circle from 'ol/geom/Circle'
+import request from '@/api/request'
 
 import { CONFIG, SPECIES_COLORS } from '@/config'
 import { hexToRgba } from '@/utils/formatters'
@@ -341,20 +342,8 @@ export function useLayers(map) {
         try {
             console.log('正在加载林分标记数据...')
             
-            // 使用绝对路径或配置的基础 URL
-            const apiUrl = CONFIG.API_BASE ? `${CONFIG.API_BASE}/stands` : '/api/stands'
-            
-            const response = await fetch(apiUrl, {
-                headers: {
-                    'Accept': 'application/json'
-                }
-            })
-            
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-            }
-            
-            const stands = await response.json()
+            // 使用 request 替代 fetch
+            const stands = await request.get('/stands')
             
             if (!Array.isArray(stands) || stands.length === 0) {
                 console.warn('返回的林分数据为空')
@@ -362,7 +351,6 @@ export function useLayers(map) {
             }
 
             const features = stands.map(stand => {
-                // 检查坐标是否存在
                 if (!stand.centerLon || !stand.centerLat) {
                     console.warn(`林分 ${stand.id} 缺少坐标`)
                     return null
@@ -371,10 +359,10 @@ export function useLayers(map) {
                 return new Feature({
                     geometry: new Point(fromLonLat([stand.centerLon, stand.centerLat])),
                     id: stand.id,
-                    stand_name: stand.standName || stand.stand_name,
-                    xiao_ban_code: stand.xiaoBanCode || stand.xiao_ban_code,
-                    dominant_species: stand.dominantSpecies || stand.dominant_species,
-                    volume_per_ha: stand.volumePerHa || stand.volume_per_ha,
+                    stand_name: stand.standName,
+                    xiao_ban_code: stand.standNo,
+                    dominant_species: stand.dominantSpecies,
+                    volume_per_ha: stand.volumePerHa,
                     area: stand.area,
                     origin: stand.origin,
                     ...stand
@@ -386,7 +374,6 @@ export function useLayers(map) {
             
             console.log(`✓ 加载了 ${features.length} 个林分标记`)
             
-            // 如果 WMS 失败，确保标记图层可见
             if (wmsError.value) {
                 markerLayer.setVisible(true)
             }
@@ -405,9 +392,8 @@ export function useLayers(map) {
         if (source.getFeatures().length > 0) return
 
         try {
-            const apiUrl = CONFIG.API_BASE ? `${CONFIG.API_BASE}/stands` : '/api/stands'
-            const response = await fetch(apiUrl)
-            const stands = await response.json()
+            // 使用 request 替代 fetch
+            const stands = await request.get('/stands')
             loadHeatmapFeatures(stands)
         } catch (error) {
             console.error('刷新热力图失败:', error)

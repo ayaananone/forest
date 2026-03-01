@@ -7,7 +7,7 @@
           <div class="stat-item" :style="{ borderColor: card.color }">
             <div class="stat-icon" :style="{ backgroundColor: card.color + '15', color: card.color }">
               <el-icon :size="24">
-                <component :is="getIcon(card.icon)" />
+                <component :is="card.icon" />
               </el-icon>
             </div>
             <div class="stat-info">
@@ -133,10 +133,10 @@ import {
   Aim, 
   Download, 
   View,
-  Tree,
-  MapLocation,
-  TrendCharts,
-  DataAnalysis
+  FirstAidKit,
+  Location,
+  DataLine,
+  Histogram
 } from '@element-plus/icons-vue'
 
 import SpeciesChart from '@/components/charts/SpeciesChart.vue'
@@ -144,7 +144,7 @@ import VolumeChart from '@/components/charts/VolumeChart.vue'
 import TrendChart from '@/components/charts/TrendChart.vue'
 import MapContainer from '@/components/map/MapContainer.vue'
 import { fetchStands, fetchSpeciesStatistics } from '@/api/forest'
-import  calculateStats from '@/utils/calculations'
+import { calculateStats } from '@/utils/calculations'
 import { formatNumber, formatArea, formatVolume } from '@/utils/formatters'
 
 // ==================== 状态管理 ====================
@@ -160,17 +160,6 @@ const stands = ref([])
 const speciesStats = ref([])
 const growthData = ref([45, 58, 72, 88, 102])
 
-// ==================== 图标映射 ====================
-
-const iconMap = {
-  Tree,
-  MapLocation,
-  TrendCharts,
-  DataAnalysis
-}
-
-const getIcon = (name) => iconMap[name] || DataAnalysis
-
 // ==================== 计算属性 ====================
 
 const stats = computed(() => calculateStats(stands.value))
@@ -180,28 +169,28 @@ const topStats = computed(() => [
     id: 'stands',
     title: '小班总数',
     value: formatNumber(stats.value.totalStands),
-    icon: 'Tree',
+    icon: FirstAidKit,
     color: '#2E7D32'
   },
   {
     id: 'area',
     title: '总面积',
     value: formatArea(stats.value.totalArea),
-    icon: 'MapLocation',
+    icon: Location,
     color: '#388E3C'
   },
   {
     id: 'volume',
     title: '总蓄积',
     value: formatVolume(stats.value.totalVolume),
-    icon: 'TrendCharts',
+    icon: Histogram,
     color: '#D32F2F'
   },
   {
     id: 'avg',
     title: '平均蓄积',
     value: stats.value.avgVolume.toFixed(1) + ' m³/ha',
-    icon: 'DataAnalysis',
+    icon: DataLine,
     color: '#00796B'
   }
 ])

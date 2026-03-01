@@ -103,4 +103,9 @@ public class JwtUtil {
                 .signWith(getSigningKey(), Jwts.SIG.HS256)
                 .compact();
     }
+
+    public String getRoleFromToken(String token) {
+        Claims claims = parseToken(token);
+        return claims.get("role", String.class);
+    }
 }
