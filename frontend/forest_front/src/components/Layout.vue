@@ -293,6 +293,14 @@ onMounted(() => {
   background-color: #f0f2f5;
 }
 
+/* 顶部统计栏 */
+.stats-bar {
+  background: #fff;
+  padding: 12px 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  z-index: 100;
+}
+
 .stat-item {
   display: flex;
   align-items: center;

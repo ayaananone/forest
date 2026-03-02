@@ -231,7 +231,9 @@ defineExpose({
   }
   
   .chart-container {
-    padding: 12px;
+    width: 100%;
+    padding: 15px;
+    box-sizing: border-box;
   }
 }
 

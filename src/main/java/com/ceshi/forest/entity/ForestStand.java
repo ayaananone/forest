@@ -2,6 +2,8 @@ package com.ceshi.forest.entity;
 
 import lombok.Data;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import org.locationtech.jts.geom.Geometry; // 或 String，根据实际需求
 
 @Data
 public class ForestStand {
@@ -24,10 +26,15 @@ public class ForestStand {
     private String speciesComposition;
     private Double centerLon;
     private Double centerLat;
+    private Geometry geom;
     private Integer elevation;
     private Double slope;
     private String aspect;
     private LocalDate surveyDate;
     private String surveyor;
-    // geom 字段在查询时单独处理
+    private LocalDateTime createTime;
+    private LocalDateTime updateTime;
+    private String createBy;
+    private String updateBy;
+    private Boolean deleted = false;
 }

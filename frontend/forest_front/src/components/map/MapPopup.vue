@@ -60,6 +60,9 @@
       
       <!-- 下载按钮组 - 支持 CSV、Excel、JSON 三种格式 -->
       <div class="popup-footer">
+        <el-button type="primary" size="small" plain @click="handleEdit">
+          <el-icon><Edit /></el-icon> 编辑
+        </el-button>
         <el-dropdown 
           split-button 
           type="success" 

@@ -11,9 +11,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
-/**
- * 林分缓存服务实现
- */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -79,10 +76,19 @@ public class StandCacheServiceImpl implements StandCacheService {
         cacheService.delete(KEY_PREFIX + "id:" + id);
         cacheService.delete(KEY_PREFIX + "all");
         cacheService.deleteByPattern(KEY_PREFIX + "high-value:*");
+        cacheService.deleteByPattern(KEY_PREFIX + "nearby:*");
+        log.info("清除林分缓存: id={}", id);
     }
 
     @Override
     public void clearAllStandCache() {
         cacheService.deleteByPattern(KEY_PREFIX + "*");
+        log.info("清除所有林分缓存");
+    }
+
+    @Override
+    public void refreshStand(Integer id) {
+        clearStandCache(id);
+        log.info("刷新林分缓存: id={}", id);
     }
 }

@@ -18,6 +18,27 @@
       @close="error = null"
     />
     
+    <!-- 编辑模式提示 -->
+    <div v-if="editMode" class="edit-mode-banner">
+      <el-alert
+        title="编辑模式：点击地图选择位置"
+        type="warning"
+        :closable="false"
+        show-icon
+      >
+        <template #default>
+          <el-button 
+            type="primary" 
+            size="small" 
+            @click="exitEditMode"
+            style="margin-left: 16px;"
+          >
+            退出编辑
+          </el-button>
+        </template>
+      </el-alert>
+    </div>
+    
     <LayerControl 
       :layers="layerList"
       @toggle="handleLayerToggle"
@@ -33,20 +54,32 @@
       @select-stand="handleRadiusSelectStand"
     />
     
-    <!-- 弹窗组件 - 使用 v-show 保持 DOM 存在 -->
+    <!-- 弹窗组件 -->
     <MapPopup
       id="popup"
       :content="popupContent"
       :visible="popupVisible"
       @close="closePopup"
       @zoom-to="handleZoomTo"
+      @edit="handleEditFromPopup"
     />
     
     <!-- 筛选面板 -->
     <div class="filter-panel">
       <el-card shadow="hover">
         <template #header>
-          <span>🔍 筛选条件</span>
+          <div class="panel-header">
+            <span>🔍 筛选条件</span>
+            <el-button 
+              type="primary" 
+              link 
+              size="small"
+              @click="openCreateDrawer"
+            >
+              <el-icon><Plus /></el-icon>
+              新增林分
+            </el-button>
+          </div>
         </template>
         <el-form label-width="70px" size="small">
           <!-- 树种 -->
@@ -57,6 +90,7 @@
               clearable
               style="width: 100%"
               @change="handleFilterChange"
+              @clear="handleClearSpecies"
             >
               <el-option
                 v-for="species in availableSpecies"
@@ -75,6 +109,7 @@
               clearable
               style="width: 100%"
               @change="handleFilterChange"
+              @clear="handleClearOrigin"
             >
               <el-option label="人工林" value="人工" />
               <el-option label="天然林" value="天然" />
@@ -106,19 +141,38 @@
       <span>缩放: {{ currentZoom }}</span>
       <span v-if="mousePosition"> | 坐标: {{ mousePosition }}</span>
     </div>
+    
+    <!-- 编辑抽屉 -->
+    <StandEditDrawer
+      v-model="drawerVisible"
+      :edit-data="currentEditStand"
+      :species-options="availableSpecies"
+      @submit="handleSaveStand"
+      @delete="handleDeleteStand"
+      @location-change="handleLocationChange"
+      @start-map-selection="startMapSelection"
+      ref="editDrawerRef"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { toLonLat, fromLonLat } from 'ol/proj'
+import { Feature } from 'ol'
+import { Point } from 'ol/geom'
+import { Vector as VectorLayer } from 'ol/layer'
+import { Vector as VectorSource } from 'ol/source'
+import { Style, Circle as CircleStyle, Fill, Stroke } from 'ol/style'
+import { Plus } from '@element-plus/icons-vue'
 import LoadingMask from '@/components/common/LoadingMask.vue'
 import LayerControl from '@/components/map/LayerControl.vue'
 import MapPopup from '@/components/map/MapPopup.vue'
 import RadiusQuery from '@/components/map/RadiusQuery.vue'
+import StandEditDrawer from '@/components/stand/StandEditDrawer.vue'
 import { useMap } from '@/composables/useMap'
-import { fetchStands } from '@/api/forest'
+import { fetchStands, createStand, updateStand, deleteStand } from '@/api/forest'
 
 const props = defineProps({
   targetId: {
@@ -139,6 +193,7 @@ const emit = defineEmits([
 
 // 引用
 const radiusQueryRef = ref(null)
+const editDrawerRef = ref(null)
 
 // 状态
 const isInitialized = ref(false)
@@ -147,6 +202,13 @@ const currentZoom = ref(props.initialZoom)
 const mousePosition = ref('')
 const radiusQueryActive = ref(false)
 const radiusQueryRadius = ref(1000)
+
+// 编辑相关状态
+const drawerVisible = ref(false)
+const currentEditStand = ref(null)
+const editMode = ref(false)
+const mapClickListener = ref(null)
+const tempMarkerLayer = ref(null)
 
 const filters = ref({
   species: '',
@@ -206,6 +268,9 @@ onMounted(async () => {
       mousePosition.value = `${coord[0].toFixed(4)}, ${coord[1].toFixed(4)}`
     })
     
+    // 添加地图点击事件（用于编辑）
+    map.value?.on('click', handleMapClick)
+    
     await loadInitialData()
     
   } catch (err) {
@@ -215,6 +280,7 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
+  exitEditMode()
   destroyMap()
 })
 
@@ -254,6 +320,16 @@ const handleOpacityChange = (layerName, opacity) => {
 }
 
 // ==================== 筛选 ====================
+const handleClearSpecies = () => {
+  filters.value.species = ''
+  handleFilterChange()
+}
+
+const handleClearOrigin = () => {
+  filters.value.origin = ''
+  handleFilterChange()
+}
+
 const handleFilterChange = () => {
   doApplyFilters()
 }
@@ -264,11 +340,13 @@ const doApplyFilters = () => {
     return
   }
   
-  applyFilters({
-    species: filters.value.species,
-    origin: filters.value.origin,
-    minVolume: filters.value.minVolume
-  })
+  const safeFilters = {
+    species: filters.value.species || '',
+    origin: filters.value.origin || '',
+    minVolume: filters.value.minVolume || 0
+  }
+  
+  applyFilters(safeFilters)
 }
 
 const resetFilters = () => {
@@ -280,6 +358,155 @@ const resetFilters = () => {
   doApplyFilters()
   clearHighlight()
   ElMessage.success('筛选已重置')
+}
+
+// ==================== 编辑功能 ====================
+const openCreateDrawer = () => {
+  currentEditStand.value = null
+  drawerVisible.value = true
+}
+
+const openEditDrawer = (stand) => {
+  currentEditStand.value = { ...stand }
+  drawerVisible.value = true
+}
+
+const handleSaveStand = async (formData, isEdit) => {
+  try {
+    if (isEdit) {
+      await updateStand(formData.id || formData.xiaoBanCode, formData)
+      ElMessage.success('林分更新成功')
+    } else {
+      await createStand(formData)
+      ElMessage.success('林分创建成功')
+    }
+    
+    await loadInitialData()
+    drawerVisible.value = false
+    exitEditMode()
+    
+  } catch (error) {
+    ElMessage.error(error.message || '保存失败')
+  }
+}
+
+const handleDeleteStand = async (stand) => {
+  try {
+    await ElMessageBox.confirm('确定要删除这个林分吗？此操作不可恢复！', '确认删除', {
+      confirmButtonText: '删除',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+    
+    await deleteStand(stand.id || stand.xiaoBanCode)
+    ElMessage.success('林分已删除')
+    
+    await loadInitialData()
+    closePopup()
+    drawerVisible.value = false
+    
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error(error.message || '删除失败')
+    }
+  }
+}
+
+const startMapSelection = () => {
+  editMode.value = true
+  
+  if (map.value && !mapClickListener.value) {
+    mapClickListener.value = (evt) => {
+      const coord = toLonLat(evt.coordinate)
+      const [lon, lat] = coord
+      
+      editDrawerRef.value?.setMapLocation(lon, lat)
+      addTempMarker(evt.coordinate)
+    }
+    
+    map.value.on('click', mapClickListener.value)
+  }
+}
+
+const exitEditMode = () => {
+  editMode.value = false
+  
+  if (map.value && mapClickListener.value) {
+    map.value.un('click', mapClickListener.value)
+    mapClickListener.value = null
+  }
+  
+  clearTempMarker()
+}
+
+const addTempMarker = (coordinate) => {
+  clearTempMarker()
+  
+  const feature = new Feature({
+    geometry: new Point(coordinate),
+    name: 'selected-location'
+  })
+  
+  const source = new VectorSource({
+    features: [feature]
+  })
+  
+  tempMarkerLayer.value = new VectorLayer({
+    source: source,
+    style: new Style({
+      image: new CircleStyle({
+        radius: 10,
+        fill: new Fill({ color: '#FF5722' }),
+        stroke: new Stroke({ color: '#fff', width: 3 })
+      })
+    }),
+    zIndex: 1000
+  })
+  
+  map.value.addLayer(tempMarkerLayer.value)
+}
+
+const clearTempMarker = () => {
+  if (tempMarkerLayer.value && map.value) {
+    map.value.removeLayer(tempMarkerLayer.value)
+    tempMarkerLayer.value = null
+  }
+}
+
+const handleLocationChange = ({ lon, lat }) => {
+  if (map.value && view.value) {
+    const coordinate = fromLonLat([lon, lat])
+    
+    view.value.animate({
+      center: coordinate,
+      zoom: 16,
+      duration: 500
+    })
+    
+    addTempMarker(coordinate)
+  }
+}
+
+const handleMapClick = (evt) => {
+  // 如果不在编辑模式，让 useMap 处理点击
+  if (!editMode.value) {
+    // 检查是否点击了林分
+    const feature = map.value.forEachFeatureAtPixel(evt.pixel, (f) => f)
+    if (feature) {
+      const standData = feature.get('standData') || feature.getProperties()
+      if (standData && (standData.id || standData.xiaoBanCode)) {
+        showStandPopup(standData, evt.coordinate)
+      }
+    }
+  }
+}
+
+const handleEditFromPopup = () => {
+  const stand = popupContent.value?._raw
+  if (stand) {
+    closePopup()
+    openEditDrawer(stand)
+  }
 }
 
 // ==================== 弹窗处理 ====================
@@ -315,6 +542,25 @@ const handleZoomTo = (standId) => {
   closePopup()
 }
 
+const showStandPopup = (stand, coordinate) => {
+  const data = {
+    type: 'stand_detail',
+    id: stand.id || stand.xiaoBanCode,
+    name: stand.standName || stand.xiaoBanCode || '未命名林分',
+    standNo: stand.xiaoBanCode || '-',
+    species: stand.dominantSpecies || '未知',
+    origin: stand.origin || '未知',
+    area: stand.area || 0,
+    volumePerHa: stand.volumePerHa || 0,
+    totalVolume: (stand.volumePerHa || 0) * (stand.area || 0),
+    age: stand.standAge || '-',
+    density: stand.canopyDensity || '-',
+    _raw: stand
+  }
+  
+  showPopup(data, coordinate)
+}
+
 // ==================== 半径查询相关 ====================
 const handleShowCircleChange = (visible) => {
   const highlightLayer = mapState.getLayerByName('highlight')
@@ -346,11 +592,11 @@ const handleRadiusSelectStand = (stand) => {
     volumePerHa: stand.volumePerHa || 0,
     totalVolume: (stand.volumePerHa || 0) * (stand.area || 0),
     age: stand.standAge || '-',
-    density: stand.canopyDensity || '-'
+    density: stand.canopyDensity || '-',
+    _raw: stand
   }
   
   showPopup(data, coordinate)
-  
   highlightStandById(stand.id || stand.xiaoBanCode)
 }
 
@@ -375,7 +621,6 @@ function handleRadiusQueryResult(stands, lon, lat, radius) {
   
   const totalVolume = stands.reduce((sum, s) => sum + (s.volumePerHa || 0) * (s.area || 0), 0)
   
-  // 简单的体积格式化
   const formatVolume = (v) => {
     if (!v || v === 0) return '0 m³'
     if (v >= 10000) return (v / 10000).toFixed(2) + ' 万m³'
@@ -384,6 +629,11 @@ function handleRadiusQueryResult(stands, lon, lat, radius) {
   
   ElMessage.success(`找到 ${stands.length} 个林分，总蓄积 ${formatVolume(totalVolume)}`)
 }
+
+defineExpose({
+  refresh: loadInitialData,
+  highlightStand: highlightStandById
+})
 </script>
 
 <style scoped>
@@ -411,6 +661,15 @@ function handleRadiusQueryResult(stands, lon, lat, radius) {
   width: 400px;
 }
 
+.edit-mode-banner {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  width: 500px;
+}
+
 .filter-panel {
   position: absolute;
   top: 20px;
@@ -427,6 +686,12 @@ function handleRadiusQueryResult(stands, lon, lat, radius) {
 
 .filter-panel :deep(.el-card__body) {
   padding: 16px;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .map-info {
@@ -450,6 +715,10 @@ function handleRadiusQueryResult(stands, lon, lat, radius) {
   
   .map-info {
     display: none;
+  }
+  
+  .edit-mode-banner {
+    width: calc(100% - 40px);
   }
 }
 
