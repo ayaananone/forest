@@ -6,21 +6,26 @@ import com.ceshi.forest.entity.ForestStand;
 import com.ceshi.forest.mapper.ForestStandMapper;
 import com.ceshi.forest.service.ForestStandService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-/**
- * 林分服务实现类
- */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ForestStandServiceImpl implements ForestStandService {
 
     private final ForestStandMapper standMapper;
+
+    // ==================== 原有方法（保持不变）====================
 
     @Override
     public List<StandDTO> getAllStands() {
@@ -68,6 +73,146 @@ public class ForestStandServiceImpl implements ForestStandService {
         }
 
         return stats;
+    }
+
+    // ==================== 新增CRUD方法 ====================
+
+    @Override
+    @Transactional
+    public StandDTO createStand(StandDTO dto, String operator) {
+        // 检查编号重复
+        ForestStand exist = standMapper.findByXiaoBanCode(dto.getXiaoBanCode());
+        if (exist != null) {
+            throw new RuntimeException("林分编号已存在: " + dto.getXiaoBanCode());
+        }
+
+        ForestStand entity = new ForestStand();
+        BeanUtils.copyProperties(dto, entity);
+
+        // 设置系统字段
+        entity.setStandId(null);
+        entity.setSurveyDate(LocalDate.now());
+        entity.setCreateTime(LocalDateTime.now());
+        entity.setUpdateTime(LocalDateTime.now());
+        entity.setCreateBy(operator);
+        entity.setUpdateBy(operator);
+        entity.setDeleted(false);
+
+        // 计算总蓄积
+        if (entity.getAreaHa() != null && entity.getVolumePerHa() != null) {
+            entity.setTotalVolume(entity.getAreaHa() * entity.getVolumePerHa());
+        }
+
+        // 解析林班小班
+        parseXiaoBanCode(entity);
+
+        standMapper.insert(entity);
+
+        log.info("创建林分成功: id={}, code={}", entity.getStandId(), entity.getXiaoBanCode());
+
+        return convertToDTO(entity);
+    }
+
+    @Override
+    @Transactional
+    public StandDTO updateStand(StandDTO dto, String operator) {
+        ForestStand exist = standMapper.findById(dto.getStandId());
+        if (exist == null) {
+            throw new RuntimeException("林分不存在: " + dto.getStandId());
+        }
+
+        // 检查编号是否被其他记录使用
+        if (!exist.getXiaoBanCode().equals(dto.getXiaoBanCode())) {
+            ForestStand codeExist = standMapper.findByXiaoBanCode(dto.getXiaoBanCode());
+            if (codeExist != null) {
+                throw new RuntimeException("林分编号已存在: " + dto.getXiaoBanCode());
+            }
+        }
+
+        // 保留创建信息
+        LocalDateTime createTime = exist.getCreateTime();
+        String createBy = exist.getCreateBy();
+
+        BeanUtils.copyProperties(dto, exist);
+
+        exist.setCreateTime(createTime);
+        exist.setCreateBy(createBy);
+        exist.setUpdateTime(LocalDateTime.now());
+        exist.setUpdateBy(operator);
+
+        // 重新计算
+        if (exist.getAreaHa() != null && exist.getVolumePerHa() != null) {
+            exist.setTotalVolume(exist.getAreaHa() * exist.getVolumePerHa());
+        }
+        parseXiaoBanCode(exist);
+
+        standMapper.update(exist);
+
+        log.info("更新林分成功: id={}", exist.getStandId());
+
+        return convertToDTO(exist);
+    }
+
+    @Override
+    @Transactional
+    public void deleteStand(Integer id, String operator) {
+        ForestStand exist = standMapper.findById(id);
+        if (exist == null) {
+            throw new RuntimeException("林分不存在: " + id);
+        }
+
+        // 逻辑删除
+        exist.setDeleted(true);
+        exist.setUpdateTime(LocalDateTime.now());
+        exist.setUpdateBy(operator);
+
+        standMapper.update(exist);
+
+        log.info("删除林分成功: id={}", id);
+    }
+
+    @Override
+    @Transactional
+    public List<StandDTO> batchUpdateStands(List<StandDTO> dtoList, String operator) {
+        return dtoList.stream()
+                .map(dto -> updateStand(dto, operator))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public void batchDeleteStands(List<Integer> ids, String operator) {
+        ids.forEach(id -> deleteStand(id, operator));
+    }
+
+    @Override
+    public boolean checkStandCodeExists(String xiaoBanCode, Integer excludeId) {
+        ForestStand stand = standMapper.findByXiaoBanCode(xiaoBanCode);
+        if (stand == null) {
+            return false;
+        }
+        return excludeId == null || !excludeId.equals(stand.getStandId());
+    }
+
+    @Override
+    public StandDTO getStandByCode(String xiaoBanCode) {
+        ForestStand stand = standMapper.findByXiaoBanCode(xiaoBanCode);
+        if (stand == null) {
+            throw new RuntimeException("林分不存在: " + xiaoBanCode);
+        }
+        return convertToDTO(stand);
+    }
+
+    // ==================== 私有方法 ====================
+
+    private void parseXiaoBanCode(ForestStand stand) {
+        if (stand.getXiaoBanCode() != null && stand.getXiaoBanCode().contains("-")) {
+            String[] parts = stand.getXiaoBanCode().split("-");
+            if (parts.length == 2) {
+                stand.setLinBan(parts[0]);
+                stand.setXiaoBan(parts[1]);
+            }
+        }
     }
 
     private StandDTO convertToDTO(ForestStand stand) {

@@ -32,11 +32,12 @@ spring:
 cache:
   type: caffeine
 
-mybatis:
-  mapper-locations: classpath:mapper/*.xml    # XML 文件路径
+mybatis-plus:
+  mapper-locations: classpath*:mapper/**/*.xml
   type-aliases-package: com.ceshi.forest.entity
   configuration:
     map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
 
 # 日志配置（会被 logback-spring.xml 覆盖，但可以作为补充）
 logging:

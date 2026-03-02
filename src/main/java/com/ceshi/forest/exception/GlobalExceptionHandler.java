@@ -1,6 +1,6 @@
 package com.ceshi.forest.exception;
 
-import com.ceshi.forest.dto.Result;
+import com.ceshi.forest.dto.ResultDTO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
@@ -16,19 +16,19 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(BadCredentialsException.class)
-    public Result<Void> handleBadCredentials(BadCredentialsException e) {
-        return Result.error(401, "用户名或密码错误");
+    public ResultDTO<Void> handleBadCredentials(BadCredentialsException e) {
+        return ResultDTO.fail(401, "用户名或密码错误");
     }
 
     @ExceptionHandler(AccessDeniedException.class)
-    public Result<Void> handleAccessDenied(AccessDeniedException e) {
-        return Result.error(403, "没有权限访问该资源");
+    public ResultDTO<Void> handleAccessDenied(AccessDeniedException e) {
+        return ResultDTO.fail(403, "没有权限访问该资源");
     }
 
     @ExceptionHandler(BindException.class)
-    public Result<Void> handleValidation(BindException e) {
+    public ResultDTO<Void> handleValidation(BindException e) {
         String message = e.getBindingResult().getAllErrors().get(0).getDefaultMessage();
-        return Result.error(400, message);
+        return ResultDTO.fail(400, message);
     }
 
     /**
@@ -41,14 +41,14 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(RuntimeException.class)
-    public Result<Void> handleRuntime(RuntimeException e) {
+    public ResultDTO<Void> handleRuntime(RuntimeException e) {
         log.error("运行时异常: {}", e.getMessage(), e);
-        return Result.error(e.getMessage());
+        return ResultDTO.fail(e.getMessage());
     }
 
     @ExceptionHandler(Exception.class)
-    public Result<Void> handleException(Exception e) {
+    public ResultDTO<Void> handleException(Exception e) {
         log.error("系统异常: {}", e.getMessage(), e);
-        return Result.error("系统繁忙，请稍后重试");
+        return ResultDTO.fail("系统繁忙，请稍后重试");
     }
 }

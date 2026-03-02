@@ -10,22 +10,20 @@ import java.util.Map;
 @Mapper
 public interface ForestStandMapper {
 
+    // 原有方法
     List<ForestStand> findAll();
-
     ForestStand findById(Integer id);
-
     ForestStand findByXiaoBanCode(String code);
-
     List<ForestStand> findByDominantSpecies(String species);
-
     List<ForestStand> findByVolumePerHaGreaterThan(Double minVolume);
-
     List<ForestStand> findByStandAgeGreaterThanEqual(Integer minAge);
-
     List<ForestStand> findNearbyStands(@Param("lon") Double lon, @Param("lat") Double lat, @Param("radius") Integer radius);
-
     List<Map<String, Object>> getStatisticsBySpecies();
-
     List<ForestStand> findInExtent(@Param("minLon") Double minLon, @Param("maxLon") Double maxLon,
                                    @Param("minLat") Double minLat, @Param("maxLat") Double maxLat);
+
+    // 新增CRUD方法
+    int insert(ForestStand stand);
+    int update(ForestStand stand);
+    int deleteById(Integer id);  // 物理删除（备用）
 }

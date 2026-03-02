@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.ceshi.forest.mapper.ForestStandMapper">
 
+    <!-- 结果映射 -->
     <resultMap id="BaseResultMap" type="com.ceshi.forest.entity.ForestStand">
         <id column="stand_id" property="standId"/>
         <result column="zone_id" property="zoneId"/>
@@ -28,53 +29,182 @@
         <result column="aspect" property="aspect"/>
         <result column="survey_date" property="surveyDate"/>
         <result column="surveyor" property="surveyor"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="create_by" property="createBy"/>
+        <result column="update_by" property="updateBy"/>
+        <result column="deleted" property="deleted"/>
     </resultMap>
 
+    <!-- 基础列 - 无 geom -->
+    <sql id="Base_Column_List">
+        stand_id, zone_id, lin_ban, xiao_ban, xiao_ban_code, stand_name,
+        area_ha, site_type, origin, stand_age, canopy_density,
+        avg_height, avg_dbh, volume_per_ha, total_volume,
+        dominant_species, species_composition, center_lon, center_lat,
+        elevation, slope, aspect, survey_date, surveyor,
+        create_time, update_time, create_by, update_by, deleted
+    </sql>
+
+    <!-- 查询所有（排除已删除） -->
     <select id="findAll" resultMap="BaseResultMap">
-        SELECT * FROM forest_stand
+        SELECT <include refid="Base_Column_List"/>
+        FROM forest_stand
+        WHERE deleted = 0
+        ORDER BY xiao_ban_code
     </select>
 
+    <!-- 根据ID查询 -->
     <select id="findById" resultMap="BaseResultMap">
-        SELECT * FROM forest_stand WHERE stand_id = #{id}
+        SELECT <include refid="Base_Column_List"/>
+        FROM forest_stand
+        WHERE stand_id = #{id}
+        AND deleted = 0
     </select>
 
+    <!-- 根据编号查询 -->
     <select id="findByXiaoBanCode" resultMap="BaseResultMap">
-        SELECT * FROM forest_stand WHERE xiao_ban_code = #{code}
+        SELECT <include refid="Base_Column_List"/>
+        FROM forest_stand
+        WHERE xiao_ban_code = #{code}
+        AND deleted = 0
     </select>
 
-    <select id="findByDominantSpecies" resultMap="BaseResultMap">
-        SELECT * FROM forest_stand WHERE dominant_species = #{species}
-    </select>
-
-    <select id="findByVolumePerHaGreaterThan" resultMap="BaseResultMap">
-        SELECT * FROM forest_stand WHERE volume_per_ha > #{minVolume} ORDER BY volume_per_ha DESC
-    </select>
-
-    <select id="findByStandAgeGreaterThanEqual" resultMap="BaseResultMap">
-        SELECT * FROM forest_stand WHERE stand_age >= #{minAge}
-    </select>
-
-    <select id="findNearbyStands" resultMap="BaseResultMap">
-        SELECT * FROM forest_stand
-        WHERE ST_DWithin(geom::geography, ST_SetSRID(ST_MakePoint(#{lon}, #{lat}), 4326)::geography, #{radius})
-        ORDER BY ST_Distance(geom::geography, ST_SetSRID(ST_MakePoint(#{lon}, #{lat}), 4326)::geography)
-    </select>
-
+    <!-- 按优势树种统计 -->
     <select id="getStatisticsBySpecies" resultType="java.util.HashMap">
         SELECT
-            dominant_species as "species",
-            CAST(COUNT(*) as INTEGER) as "standCount",
-            COALESCE(SUM(area_ha), 0.0) as "totalArea",
-            COALESCE(SUM(total_volume), 0.0) as "totalVolume",
-            COALESCE(AVG(volume_per_ha), 0.0) as "avgVolumePerHa"
+            dominant_species as species,
+            COUNT(*) as standCount,
+            SUM(area_ha) as totalArea,
+            SUM(total_volume) as totalVolume
         FROM forest_stand
+        WHERE deleted = 0
+          AND dominant_species IS NOT NULL
+          AND dominant_species != ''
         GROUP BY dominant_species
+        ORDER BY standCount DESC
     </select>
 
-    <select id="findInExtent" resultMap="BaseResultMap">
-        SELECT * FROM forest_stand
-        WHERE center_lon BETWEEN #{minLon} AND #{maxLon}
-          AND center_lat BETWEEN #{minLat} AND #{maxLat}
+    <!-- 根据优势树种查询 -->
+    <select id="findByDominantSpecies" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM forest_stand
+        WHERE dominant_species = #{species}
+        AND deleted = 0
+        ORDER BY xiao_ban_code
     </select>
+
+    <!-- 按公顷蓄积量查询 -->
+    <select id="findByVolumePerHaGreaterThan" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM forest_stand
+        WHERE volume_per_ha > #{minVolume}
+        AND deleted = 0
+        ORDER BY volume_per_ha DESC
+    </select>
+
+    <!-- 按林分年龄查询 -->
+    <select id="findByStandAgeGreaterThanEqual" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM forest_stand
+        WHERE stand_age >= #{minAge}
+        AND deleted = 0
+        ORDER BY stand_age DESC
+    </select>
+
+    <!-- 半径查询附近林分 - 优化版本 -->
+    <select id="findNearbyStands" resultMap="BaseResultMap">
+        SELECT * FROM (
+                          SELECT
+                              stand_id, zone_id, lin_ban, xiao_ban, xiao_ban_code, stand_name,
+                              area_ha, site_type, origin, stand_age, canopy_density,
+                              avg_height, avg_dbh, volume_per_ha, total_volume,
+                              dominant_species, species_composition, center_lon, center_lat,
+                              elevation, slope, aspect, survey_date, surveyor,
+                              create_time, update_time, create_by, update_by, deleted,
+                              (6371000 * acos(
+                                      LEAST(1.0, GREATEST(-1.0,
+                                                          cos(radians(#{lat})) * cos(radians(center_lat)) *
+                                                          cos(radians(center_lon) - radians(#{lon})) +
+                                                          sin(radians(#{lat})) * sin(radians(center_lat))
+                                                 ))
+                                         )) AS distance
+                          FROM forest_stand
+                          WHERE deleted = 0
+                            -- 使用边界框预过滤，减少计算量
+                            AND center_lat BETWEEN
+                              #{lat} - degrees(#{radius}::float / 6371000.0)
+                              AND #{lat} + degrees(#{radius}::float / 6371000.0)
+                            AND center_lon BETWEEN
+                              #{lon} - degrees(#{radius}::float / (6371000.0 * cos(radians(#{lat}))))
+                              AND #{lon} + degrees(#{radius}::float / (6371000.0 * cos(radians(#{lat}))))
+                      ) t
+        WHERE distance &lt;= #{radius}
+        ORDER BY distance
+    </select>
+
+    <!-- 范围查询 -->
+    <select id="findInExtent" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM forest_stand
+        WHERE center_lon BETWEEN #{minLon} AND #{maxLon}
+        AND center_lat BETWEEN #{minLat} AND #{maxLat}
+        AND deleted = 0
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="standId">
+        INSERT INTO forest_stand (
+            zone_id, lin_ban, xiao_ban, xiao_ban_code, stand_name,
+            area_ha, site_type, origin, stand_age, canopy_density,
+            avg_height, avg_dbh, volume_per_ha, total_volume,
+            dominant_species, species_composition, center_lon, center_lat,
+            elevation, slope, aspect, survey_date, surveyor,
+            create_time, update_time, create_by, update_by, deleted
+        ) VALUES (
+                     #{zoneId}, #{linBan}, #{xiaoBan}, #{xiaoBanCode}, #{standName},
+                     #{areaHa}, #{siteType}, #{origin}, #{standAge}, #{canopyDensity},
+                     #{avgHeight}, #{avgDbh}, #{volumePerHa}, #{totalVolume},
+                     #{dominantSpecies}, #{speciesComposition}, #{centerLon}, #{centerLat},
+                     #{elevation}, #{slope}, #{aspect}, #{surveyDate}, #{surveyor},
+                     NOW(), NOW(), #{createBy}, #{updateBy}, 0
+                 )
+    </insert>
+
+    <update id="update">
+        UPDATE forest_stand
+        SET
+            zone_id = #{zoneId},
+            lin_ban = #{linBan},
+            xiao_ban = #{xiaoBan},
+            xiao_ban_code = #{xiaoBanCode},
+            stand_name = #{standName},
+            area_ha = #{areaHa},
+            site_type = #{siteType},
+            origin = #{origin},
+            stand_age = #{standAge},
+            canopy_density = #{canopyDensity},
+            avg_height = #{avgHeight},
+            avg_dbh = #{avgDbh},
+            volume_per_ha = #{volumePerHa},
+            total_volume = #{totalVolume},
+            dominant_species = #{dominantSpecies},
+            species_composition = #{speciesComposition},
+            center_lon = #{centerLon},
+            center_lat = #{centerLat},
+            elevation = #{elevation},
+            slope = #{slope},
+            aspect = #{aspect},
+            survey_date = #{surveyDate},
+            surveyor = #{surveyor},
+            update_time = NOW(),
+            update_by = #{updateBy},
+            deleted = #{deleted}
+        WHERE stand_id = #{standId}
+    </update>
+
+    <!-- 物理删除 -->
+    <delete id="deleteById">
+        DELETE FROM forest_stand WHERE stand_id = #{id}
+    </delete>
 
 </mapper>
