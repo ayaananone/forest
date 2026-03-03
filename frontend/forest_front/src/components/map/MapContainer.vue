@@ -650,6 +650,8 @@ defineExpose({
   background-color: #f0f2f5;
   display: block;
   min-height: 400px;
+  transform: translateZ(0);
+  will-change: transform;
 }
 
 .map-error {
@@ -739,4 +741,94 @@ defineExpose({
   color: #606266;
   font-weight: 500;
 }
+
+@media (max-width: 768px) {
+  /* 筛选面板改为底部抽屉式 */
+  .filter-panel {
+    position: fixed;
+    left: 10px;
+    right: 10px;
+    top: auto;
+    bottom: 50px;
+    width: auto;
+    max-width: none;
+    max-height: 45vh;
+    overflow-y: auto;
+    z-index: 100;
+    transition: transform 0.3s ease;
+  }
+
+  /* 图层控制移到左上角 */
+  :deep(.layer-control) {
+    position: fixed;
+    left: 10px;
+    top: 70px;
+    right: auto;
+    width: auto;
+    min-width: 200px;
+    max-width: calc(100% - 20px);
+  }
+
+  /* 半径查询简化为小按钮 */
+  :deep(.radius-query) {
+    position: fixed;
+    right: 10px;
+    top: 70px;
+    left: auto;
+    width: auto;
+  }
+
+  :deep(.radius-query .el-card) {
+    max-width: 200px;
+  }
+
+  /* 隐藏非关键信息 */
+  .map-info {
+    display: none;
+  }
+
+  .map-container {
+    /* 降低图像质量提升性能 */
+    image-rendering: pixelated;
+  }
+
+  /* 编辑提示优化 */
+  .edit-mode-banner {
+    left: 10px;
+    right: 10px;
+    width: auto;
+    transform: none;
+    top: auto;
+    bottom: 20px;
+  }
+
+  /* 增大触摸目标 */
+  :deep(.el-button),
+  :deep(.el-radio__input),
+  :deep(.el-checkbox__input) {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  :deep(.el-slider__runway) {
+    height: 8px;
+    margin: 12px 0;
+  }
+
+  :deep(.el-slider__button) {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+/* 触摸设备优化 */
+@media (hover: none) and (pointer: coarse) {
+  .filter-panel,
+  :deep(.layer-control),
+  :deep(.radius-query) {
+    backdrop-filter: blur(10px);
+    background: rgba(255,255,255,0.95);
+  }
+}
+
 </style>

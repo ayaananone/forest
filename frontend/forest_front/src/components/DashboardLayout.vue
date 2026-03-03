@@ -1,51 +1,125 @@
-<!-- /src/components/DashboardLayout.vue -->
+
 <template>
   <Layout>
     <div class="dashboard-wrapper">
-      <!-- 统计信息展开按钮 -->
-      <div 
-        class="sidebar-toggle"
-        :class="{ collapsed: sidebarCollapsed, expanded: !sidebarCollapsed }"
-        @click="toggleSidebar"
-      >
-        <span class="toggle-text">{{ sidebarCollapsed ? '展开统计' : '收起统计' }}</span>
-        <el-icon :size="12">
-          <Arrow-Right v-if="sidebarCollapsed" />
-          <Arrow-Left v-else />
-        </el-icon>
-      </div>
+      <!-- 桌面端布局 -->
+      <template v-if="!isMobile">
+        <button 
+          class="sidebar-toggle desktop" 
+          :class="{ 'is-collapsed': sidebarCollapsed }"
+          @click="toggleSidebar"
+        >
+          <el-icon :size="16">
+            <Arrow-Right v-if="sidebarCollapsed" />
+            <Arrow-Left v-else />
+          </el-icon>
+        </button>
 
-      <!-- 统计面板 -->
-      <div class="stats-panel" :class="{ collapsed: sidebarCollapsed, expanded: !sidebarCollapsed }">
-        <div class="panel-inner">
-          <ChartContainer ref="chartContainerRef" />
-        </div>
-      </div>
+        <aside class="stats-panel desktop" :class="{ collapsed: sidebarCollapsed }">
+          <div class="panel-inner">
+            <ChartContainer ref="chartContainerRef" />
+          </div>
+        </aside>
+        
+        <main class="map-panel" :class="{ expanded: sidebarCollapsed }">
+          <MapContainer 
+            ref="mapContainerRef"
+            @stand-select="handleStandSelect"
+            @radius-query-result="handleRadiusResult"
+            @error="handleMapError"
+          />
+        </main>
+      </template>
       
-      <!-- 地图面板 -->
-      <div class="map-panel" :class="{ expanded: sidebarCollapsed }">
-        <MapContainer 
-          ref="mapContainerRef"
-          @stand-select="handleStandSelect"
-          @radius-query-result="handleRadiusResult"
-          @error="handleMapError"
-        />
-      </div>
+      <!-- 移动端布局 -->
+      <template v-else>
+        <!-- 浮动统计按钮 -->
+        <button class="stats-fab" @click="showMobileStats = true">
+          <el-icon :size="24"><Data-Line /></el-icon>
+          <span>统计</span>
+        </button>
+        
+        <!-- 移动端统计抽屉 -->
+        <el-drawer
+          v-model="showMobileStats"
+          title="数据统计"
+          size="92%"
+          direction="btt"
+          :with-header="true"
+          destroy-on-close
+          class="mobile-stats-drawer"
+        >
+          <MobileStatsPanel 
+            :stands="stands" 
+            :species-stats="speciesStats"
+          />
+        </el-drawer>
+        
+        <!-- 地图全屏 -->
+        <main class="map-panel mobile-full">
+          <MapContainer 
+            ref="mapContainerRef"
+            @stand-select="handleStandSelect"
+            @radius-query-result="handleRadiusResult"
+            @error="handleMapError"
+          />
+        </main>
+      </template>
     </div>
   </Layout>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { ElNotification } from 'element-plus'
-import { ArrowLeft, ArrowRight } from '@element-plus/icons-vue'
+import { ArrowLeft, ArrowRight, DataLine } from '@element-plus/icons-vue'
 import Layout from './Layout.vue'
 import ChartContainer from '@/components/charts/ChartContainer.vue'
+import MobileStatsPanel from '@/components/charts/MobileStatsPanel.vue'
 import MapContainer from '@/components/map/MapContainer.vue'
+import { fetchStands, fetchSpeciesStatistics } from '@/api/forest'
 
 const sidebarCollapsed = ref(true)
-const chartContainerRef = ref(null)
-const mapContainerRef = ref(null)
+const showMobileStats = ref(false)
+const isMobile = ref(false)
+const stands = ref([])
+const speciesStats = ref([])
+
+// 检测设备类型
+const checkDevice = () => {
+  isMobile.value = window.innerWidth <= 768
+}
+
+let resizeTimer = null
+const handleResize = () => {
+  clearTimeout(resizeTimer)
+  resizeTimer = setTimeout(checkDevice, 100)
+}
+
+onMounted(() => {
+  checkDevice()
+  window.addEventListener('resize', handleResize)
+  loadData()
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize)
+  clearTimeout(resizeTimer)
+})
+
+// 加载数据
+const loadData = async () => {
+  try {
+    const [standsRes, statsRes] = await Promise.all([
+      fetchStands(),
+      fetchSpeciesStatistics()
+    ])
+    stands.value = standsRes || []
+    speciesStats.value = statsRes || []
+  } catch (error) {
+    console.error('加载数据失败:', error)
+  }
+}
 
 const toggleSidebar = () => {
   sidebarCollapsed.value = !sidebarCollapsed.value
@@ -83,76 +157,53 @@ const handleMapError = (error) => {
   height: 100%;
 }
 
-.sidebar-toggle {
+/* 桌面端样式 */
+.sidebar-toggle.desktop {
   position: absolute;
   left: 0;
   top: 50%;
   transform: translateY(-50%);
   z-index: 1001;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  padding: 16px 8px;
+  width: 32px;
+  height: 64px;
   background: #2E7D32;
   color: #fff;
+  border: none;
+  border-radius: 0 8px 8px 0;
   cursor: pointer;
-  border-radius: 0 6px 6px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   box-shadow: 2px 0 8px rgba(0,0,0,0.2);
-  transition: all 0.3s ease;
-  writing-mode: vertical-rl;
-  text-orientation: mixed;
-  letter-spacing: 2px;
+  transition: all 0.3s;
 }
 
-.sidebar-toggle:hover {
+.sidebar-toggle.desktop:hover {
   background: #1B5E20;
-  padding-left: 12px;
+  width: 36px;
 }
 
-/* 展开状态时，按钮移动到面板右侧 */
-.sidebar-toggle.expanded {
-  left: auto;
-  right: 10px;
-  border-radius: 6px 0 0 6px;
-  box-shadow: -2px 0 8px rgba(0,0,0,0.2);
-}
-
-.toggle-text {
-  font-size: 13px;
-  font-weight: 500;
-}
-
-.stats-panel {
-  position: fixed;
+.sidebar-toggle.desktop.is-collapsed {
   left: 0;
-  top: 60px;
-  bottom: 30px;
+}
+
+.stats-panel.desktop {
   width: 400px;
   background: #f5f7fa;
-  z-index: 200;
   transform: translateX(0);
-  transition: all 0.3s ease;
+  transition: transform 0.3s ease, width 0.3s ease;
   overflow: hidden;
-  box-shadow: 2px 0 8px rgba(0,0,0,0.1);
+  flex-shrink: 0;
+  z-index: 100;
 }
 
-/* 收起状态 */
-.stats-panel.collapsed {
+.stats-panel.desktop.collapsed {
   transform: translateX(-100%);
-  width: 400px;
-}
-
-/* 展开状态 - 全屏宽度 */
-.stats-panel.expanded {
-  transform: translateX(0);
-  width: 100%;
-  z-index: 300;
+  width: 0;
 }
 
 .panel-inner {
-  width: 100%;
+  width: 400px;
   height: 100%;
   overflow-y: auto;
   padding: 20px;
@@ -164,39 +215,55 @@ const handleMapError = (error) => {
   position: relative;
   min-width: 0;
   min-height: 0;
-  transition: all 0.3s ease;
-  height: 100%;
-  margin-left: 400px;
+  transition: margin-left 0.3s;
 }
 
 .map-panel.expanded {
   margin-left: 0;
 }
 
-/* 响应式适配 */
-@media (max-width: 768px) {
-  .stats-panel {
-    width: 100%;
-    top: 60px;
-    bottom: 0;
-  }
-  
-  .stats-panel.collapsed {
-    width: 100%;
-    transform: translateX(-100%);
-  }
-  
-  .stats-panel.expanded {
-    width: 100%;
-  }
-  
-  .sidebar-toggle.expanded {
-    left: auto;
-    right: 10px;
-  }
-  
-  .map-panel {
-    margin-left: 0;
-  }
+/* 移动端样式 */
+.stats-fab {
+  position: fixed;
+  right: 20px;
+  bottom: 100px;
+  z-index: 1001;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #2E7D32;
+  color: #fff;
+  border: none;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.stats-fab:active {
+  transform: scale(0.95);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.mobile-full {
+  width: 100%;
+  height: 100%;
+}
+
+:deep(.mobile-stats-drawer .el-drawer__body) {
+  padding: 0;
+  background: #f5f7fa;
+}
+
+:deep(.mobile-stats-drawer .el-drawer__header) {
+  margin-bottom: 0;
+  padding: 16px;
+  border-bottom: 1px solid #e8e8e8;
+  font-weight: 600;
 }
 </style>

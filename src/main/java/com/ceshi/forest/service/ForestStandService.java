@@ -24,5 +24,4 @@ public interface ForestStandService {
     List<StandDTO> batchUpdateStands(List<StandDTO> dtoList, String operator);
     void batchDeleteStands(List<Integer> ids, String operator);
     boolean checkStandCodeExists(String xiaoBanCode, Integer excludeId);
-    StandDTO getStandByCode(String xiaoBanCode);
 }

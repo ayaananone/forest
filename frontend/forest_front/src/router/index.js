@@ -19,7 +19,7 @@ const routes = [
   {
     path: '/',
     name: 'Home',
-    component: () => import('@/views/HomeView.vue'), // 地图展示
+    component: () => import('@/views/HomeView.vue'),
     meta: { requiresAuth: true }
   },
   {
@@ -42,29 +42,44 @@ const router = createRouter({
 })
 
 router.beforeEach((to, from, next) => {
-  const userStore = useUserStore()
-  
-  // 公开页面
-  if (to.meta.public) {
-    if (to.path === '/login' && userStore.isLoggedIn) {
-      return next('/')  // 改为 return
+  // 防止 next 被多次调用的安全包装器
+  let called = false
+  const safeNext = (...args) => {
+    if (!called) {
+      called = true
+      next(...args)
     }
-    return next()  // 改为 return
   }
-  
-  // 需要登录
-  if (!userStore.isLoggedIn) {
-    ElMessage.warning('请先登录')
-    return next({ path: '/login', query: { redirect: to.fullPath } })  // 改为 return
+
+  try {
+    const userStore = useUserStore()
+    
+    // 公开页面
+    if (to.meta.public) {
+      if (to.path === '/login' && userStore.isLoggedIn) {
+        return safeNext('/')
+      }
+      return safeNext()
+    }
+    
+    // 需要登录
+    if (!userStore.isLoggedIn) {
+      ElMessage.warning('请先登录')
+      return safeNext({ path: '/login', query: { redirect: to.fullPath } })
+    }
+    
+    // 需要管理员权限
+    if (to.meta.requiresAdmin && !userStore.isAdmin) {
+      ElMessage.error('需要管理员权限')
+      return safeNext('/')
+    }
+    
+    return safeNext()
+    
+  } catch (error) {
+    console.error('导航守卫错误:', error)
+    return safeNext('/login')
   }
-  
-  // 需要管理员权限
-  if (to.meta.requiresAdmin && !userStore.isAdmin) {
-    ElMessage.error('需要管理员权限')
-    return next('/')  // 改为 return
-  }
-  
-  return next()  // 改为 return
 })
 
 export default router
