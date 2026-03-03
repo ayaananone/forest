@@ -252,46 +252,51 @@ export function useMap(targetId, options = {}) {
         const props = feature.getProperties()
         console.log('原始属性:', JSON.stringify(props, null, 2))
 
-        //优先获取 standId（数据库主键，数字类型）
-        const standId = props.standId || props.stand_id || props.id
+        // 修复：更宽松的字段名匹配
+        const standId = props.standId || 
+                    props.stand_id || 
+                    props.id || 
+                    props.zone_id ||
+                    props.standId ||
+                    feature.getId()  // OpenLayers 自带的 ID
         
-        // 小班编码仅用于显示
-        const xiaoBanCode = props.xiaoBanCode || props.xiao_ban_code || '-'
+        // 修复：更宽松的小班编码匹配
+        const xiaoBanCode = props.xiaoBanCode || 
+                        props.xiao_ban_code || 
+                        props.standNo ||
+                        props.stand_no ||
+                        props.xiaoBan ||
+                        '-'
         
         console.log('standId:', standId, 'xiaoBanCode:', xiaoBanCode)
 
-        //使用驼峰命名获取数据（与后端JSON一致）
-        const area = parseFloat(props.areaHa) || 0
+        // 其他代码保持不变...
+        const area = parseFloat(props.areaHa) || parseFloat(props.area_ha) || parseFloat(props.area) || 0
         
         const volumePerHa = parseFloat(props.volumePerHa) || 
-                           parseFloat(props.volume_per_ha) || 0
+                        parseFloat(props.volume_per_ha) || 0
         
-        // 优先使用后端计算的 totalVolume
         let totalVolume = parseFloat(props.totalVolume) || 
-                         parseFloat(props.total_volume) || 0
+                        parseFloat(props.total_volume) || 0
         
-        // 如果没有 totalVolume，手动计算
         if (totalVolume === 0 && area > 0 && volumePerHa > 0) {
             totalVolume = area * volumePerHa
         }
 
-        console.log('面积:', area, '每公顷蓄积:', volumePerHa, '总蓄积:', totalVolume)
-
         const data = {
             type: 'stand_detail',
-            id: standId,                    // 数据库主键（数字）
-            xiaoBanCode: xiaoBanCode,       // 小班编码（如 01-01）
+            id: standId,
+            xiaoBanCode: xiaoBanCode,
             name: props.standName || props.stand_name || props.name || '未命名林分',
-            // 下载必须使用 standId（数字）
-            downloadId: standId,            
-            displayNo: xiaoBanCode,         // 显示用小班编码
-            species: props.dominantSpecies || props.dominant_species || props.species || '未知',
-            origin: props.origin || props.forest_origin || '未知',
-            area: props.areaHa || Math.round(area * 100) / 100,
-            volumePerHa: Math.round(volumePerHa * 100) / 100,
-            totalVolume: props.totalVolume || Math.round(totalVolume * 100) / 100,
-            age: props.standAge || props.stand_age || props.age || '-',
-            density: props.canopyDensity || props.canopy_density || props.density || '-',
+            downloadId: standId,
+            displayNo: xiaoBanCode,
+            species: props.dominantSpecies || props.dominant_species || '未知',
+            origin: props.origin || '未知',
+            area: area,
+            volumePerHa: volumePerHa,
+            totalVolume: totalVolume,
+            age: props.standAge || props.stand_age || '-',
+            density: props.canopyDensity || props.canopy_density || '-',
             aspect: props.aspect || '未知',
             slope: props.slope || '-',
             altitude: props.elevation || props.altitude || '-'

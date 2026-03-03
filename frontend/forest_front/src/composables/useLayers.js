@@ -352,19 +352,43 @@ export function useLayers(map) {
 
             const features = stands.map(stand => {
                 if (!stand.centerLon || !stand.centerLat) {
-                    console.warn(`林分 ${stand.id} 缺少坐标`)
+                    console.warn(`林分 ${stand.standId} 缺少坐标`)
                     return null
                 }
                 
+                // 修复：统一字段名，与弹窗查找逻辑匹配
                 return new Feature({
                     geometry: new Point(fromLonLat([stand.centerLon, stand.centerLat])),
-                    id: stand.id,
+                    // 主键 ID（多种可能的名字，确保兼容性）
+                    standId: stand.standId,
+                    stand_id: stand.standId,
+                    id: stand.standId,
+                    zone_id: stand.standId,
+                    
+                    // 小班编码
+                    xiaoBanCode: stand.xiaoBanCode,
+                    xiao_ban_code: stand.xiaoBanCode,
+                    standNo: stand.xiaoBanCode,
+                    
+                    // 名称
+                    standName: stand.standName,
                     stand_name: stand.standName,
-                    xiao_ban_code: stand.standNo,
+                    
+                    // 其他字段...
+                    dominantSpecies: stand.dominantSpecies,
                     dominant_species: stand.dominantSpecies,
+                    volumePerHa: stand.volumePerHa,
                     volume_per_ha: stand.volumePerHa,
-                    area: stand.area,
+                    areaHa: stand.areaHa,
+                    area_ha: stand.areaHa,
+                    area: stand.areaHa,  // 兼容性
                     origin: stand.origin,
+                    standAge: stand.standAge,
+                    stand_age: stand.standAge,
+                    canopyDensity: stand.canopyDensity,
+                    canopy_density: stand.canopyDensity,
+                    
+                    // 保留原始数据
                     ...stand
                 })
             }).filter(f => f !== null)

@@ -257,11 +257,24 @@ const setResult = (result) => {
   // 按距离排序
   standsWithDistance.sort((a, b) => a.distance - b.distance)
 
+  // 修复：使用 areaHa 计算总面积，同时计算总蓄积
+  const totalArea = result.stands?.reduce((sum, s) => sum + (s.areaHa || s.area || 0), 0) || 0
+  
+  // 如果 result 中没有 totalVolume，则自己计算
+  let totalVolume = result.totalVolume || 0
+  if (totalVolume === 0 && result.stands?.length > 0) {
+    totalVolume = result.stands.reduce((sum, s) => {
+      const area = s.areaHa || s.area || 0
+      const volumePerHa = s.volumePerHa || 0
+      return sum + (volumePerHa * area)
+    }, 0)
+  }
+
   lastResult.value = {
     radius: result.radius,
     count: result.stands?.length || 0,
-    totalVolume: result.totalVolume || 0,
-    totalArea: result.stands?.reduce((sum, s) => sum + (s.area || 0), 0) || 0,
+    totalVolume: totalVolume,
+    totalArea: totalArea,
     stands: standsWithDistance,
     centerLon: result.lon,
     centerLat: result.lat,
