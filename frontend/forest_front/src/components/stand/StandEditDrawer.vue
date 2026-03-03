@@ -1,238 +1,485 @@
 <template>
   <el-drawer
     v-model="visible"
-    :title="isEdit ? '✏️ 编辑林分' : '➕ 新增林分'"
-    size="580px"
+    :title="isEdit ? '编辑林分' : '新增林分'"
+    :size="isMobile ? '100%' : '680px'"
     :close-on-click-modal="false"
     class="stand-edit-drawer"
+    :class="{ 'mobile-drawer': isMobile }"
     @closed="handleClosed"
   >
+    <!-- 移动端顶部进度指示器 -->
+    <div v-if="isMobile" class="mobile-progress">
+      <div class="progress-bar">
+        <div class="progress-fill" :style="{ width: progressPercent + '%' }"></div>
+      </div>
+      <span class="progress-text">{{ currentSection }}/{{ totalSections }}</span>
+    </div>
+
     <el-form
       ref="formRef"
       :model="formData"
       :rules="formRules"
-      label-width="100px"
+      :label-position="isMobile ? 'top' : 'right'"
+      :label-width="isMobile ? 'auto' : '110px'"
       size="default"
       class="edit-form"
+      :class="{ 'mobile-form': isMobile }"
     >
-      <!-- 基本信息 -->
-      <el-divider content-position="left">基本信息</el-divider>
-      
-      <el-form-item label="林分编号" prop="xiaoBanCode">
-        <el-input 
-          v-model="formData.xiaoBanCode" 
-          placeholder="如：01-05"
-          :disabled="isEdit"
-        >
-          <template #prefix>
-            <el-icon><Document /></el-icon>
-          </template>
-        </el-input>
-      </el-form-item>
-
-      <el-form-item label="林分名称" prop="standName">
-        <el-input v-model="formData.standName" placeholder="输入林分名称" />
-      </el-form-item>
-
-      <el-form-item label="优势树种" prop="dominantSpecies">
-        <el-select 
-          v-model="formData.dominantSpecies" 
-          placeholder="选择树种"
-          style="width: 100%"
-          filterable
-          allow-create
-        >
-          <el-option
-            v-for="species in speciesOptions"
-            :key="species"
-            :label="species"
-            :value="species"
-          >
-            <span style="display: flex; align-items: center; gap: 8px;">
-              <span 
-                class="color-dot" 
-                :style="{ backgroundColor: getSpeciesColor(species) }"
-              />
-              {{ species }}
-            </span>
-          </el-option>
-        </el-select>
-      </el-form-item>
-
-      <el-form-item label="起源类型" prop="origin">
-        <el-radio-group v-model="formData.origin">
-          <el-radio-button label="天然">🌲 天然林</el-radio-button>
-          <el-radio-button label="人工">🌱 人工林</el-radio-button>
-        </el-radio-group>
-      </el-form-item>
-
-      <!-- 面积与蓄积 -->
-      <el-divider content-position="left">面积与蓄积</el-divider>
-
-      <el-row :gutter="16">
-        <el-col :span="12">
-          <el-form-item label="面积" prop="area">
-            <el-input-number 
-              v-model="formData.area" 
-              :min="0.01"
-              :precision="2"
-              :step="0.1"
-              style="width: 100%"
-              placeholder="公顷"
-            >
-              <template #append>ha</template>
-            </el-input-number>
-          </el-form-item>
-        </el-col>
-        
-        <el-col :span="12">
-          <el-form-item label="每公顷蓄积" prop="volumePerHa">
-            <el-input-number 
-              v-model="formData.volumePerHa" 
-              :min="0"
-              :precision="2"
-              :step="1"
-              style="width: 100%"
-              placeholder="m³/ha"
-            >
-              <template #append>m³</template>
-            </el-input-number>
-          </el-form-item>
-        </el-col>
-      </el-row>
-
-      <el-form-item label="总蓄积">
-        <el-statistic 
-          :value="totalVolume" 
-          suffix=" m³"
-          :precision="2"
-          class="volume-statistic"
-        />
-      </el-form-item>
-
-      <!-- 林分特征 -->
-      <el-divider content-position="left">林分特征</el-divider>
-
-      <el-row :gutter="16">
-        <el-col :span="12">
-          <el-form-item label="林龄" prop="standAge">
-            <el-input-number 
-              v-model="formData.standAge" 
-              :min="1"
-              :max="200"
-              style="width: 100%"
-              placeholder="年"
-            >
-              <template #append>年</template>
-            </el-input-number>
-          </el-form-item>
-        </el-col>
-        
-        <el-col :span="12">
-          <el-form-item label="郁闭度" prop="canopyDensity">
-            <el-slider 
-              v-model="formData.canopyDensity" 
-              :max="1"
-              :step="0.1"
-              show-stops
-            />
-          </el-form-item>
-        </el-col>
-      </el-row>
-
-      <el-form-item label="立地等级" prop="siteClass">
-        <el-rate
-          v-model="formData.siteClass"
-          :max="5"
-          :colors="['#99A9BF', '#F7BA2A', '#FF9900']"
-          show-text
-          :texts="['Ⅴ', 'Ⅳ', 'Ⅲ', 'Ⅱ', 'Ⅰ']"
-        />
-      </el-form-item>
-
-      <!-- 空间信息 -->
+      <!-- 基本信息 - 始终展开 -->
       <el-divider content-position="left">
-        <span class="location-title">
-          空间信息
-          <el-tag v-if="hasLocation" type="success" size="small">已定位</el-tag>
-          <el-tag v-else type="warning" size="small">未定位</el-tag>
-        </span>
+        <span class="section-title">基本信息</span>
       </el-divider>
+      
+      <div class="form-section">
+        <el-form-item label="林分编号" prop="xiaoBanCode">
+          <el-input 
+            v-model="formData.xiaoBanCode" 
+            placeholder="如：01-05"
+            :disabled="isEdit"
+            :size="isMobile ? 'large' : 'default'"
+          />
+        </el-form-item>
 
-      <el-form-item label="中心经度" prop="centerLon">
-        <el-input-number 
-          v-model="formData.centerLon" 
-          :precision="6"
-          style="width: 100%"
-          placeholder="点击地图选择"
-          @change="emitLocationChange"
-        />
-      </el-form-item>
+        <el-form-item label="林分名称" prop="standName">
+          <el-input 
+            v-model="formData.standName" 
+            placeholder="输入林分名称"
+            :size="isMobile ? 'large' : 'default'"
+          />
+        </el-form-item>
 
-      <el-form-item label="中心纬度" prop="centerLat">
-        <el-input-number 
-          v-model="formData.centerLat" 
-          :precision="6"
-          style="width: 100%"
-          placeholder="点击地图选择"
-          @change="emitLocationChange"
-        />
-      </el-form-item>
+        <el-row :gutter="isMobile ? 0 : 16">
+          <el-col :span="isMobile ? 24 : 12">
+            <el-form-item label="优势树种" prop="dominantSpecies">
+              <el-select 
+                v-model="formData.dominantSpecies" 
+                placeholder="选择树种"
+                style="width: 100%"
+                filterable
+                allow-create
+                :size="isMobile ? 'large' : 'default'"
+              >
+                <el-option
+                  v-for="species in speciesOptions"
+                  :key="species"
+                  :label="species"
+                  :value="species"
+                />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="isMobile ? 24 : 12">
+            <el-form-item label="起源类型" prop="origin">
+              <el-radio-group v-model="formData.origin" class="origin-radio">
+                <el-radio-button value="天然">天然林</el-radio-button>
+                <el-radio-button value="人工">人工林</el-radio-button>
+              </el-radio-group>
+            </el-form-item>
+          </el-col>
+        </el-row>
+      </div>
 
-      <el-form-item>
-        <el-button type="primary" plain @click="startMapSelection">
-          <el-icon><MapLocation /></el-icon>
-          {{ hasLocation ? '重新选点' : '地图选点' }}
-        </el-button>
-        <el-button v-if="hasLocation" @click="clearLocation">
-          <el-icon><Delete /></el-icon>
-          清除位置
-        </el-button>
-      </el-form-item>
+      <!-- 面积与蓄积 - 可折叠 -->
+      <el-collapse v-model="activeSections" class="mobile-collapse">
+        <el-collapse-item name="area">
+          <template #title>
+            <span class="section-title">面积与蓄积</span>
+            <el-tag v-if="hasAreaData" type="success" size="small" class="section-tag">已填</el-tag>
+          </template>
+          
+          <div class="form-section">
+            <el-row :gutter="isMobile ? 0 : 16">
+              <el-col :span="isMobile ? 24 : 8">
+                <el-form-item label="面积 (ha)" prop="areaHa">
+                  <el-input-number 
+                    v-model="formData.areaHa" 
+                    :min="0.01"
+                    :precision="2"
+                    :step="0.1"
+                    style="width: 100%"
+                    :size="isMobile ? 'large' : 'default'"
+                    placeholder="0.00"
+                  />
+                </el-form-item>
+              </el-col>
+              <el-col :span="isMobile ? 24 : 8">
+                <el-form-item label="每公顷蓄积 (m³)" prop="volumePerHa">
+                  <el-input-number 
+                    v-model="formData.volumePerHa" 
+                    :min="0"
+                    :precision="2"
+                    style="width: 100%"
+                    :size="isMobile ? 'large' : 'default'"
+                    placeholder="0.00"
+                  />
+                </el-form-item>
+              </el-col>
+              <el-col :span="isMobile ? 24 : 8">
+                <el-form-item label="总蓄积">
+                  <div class="total-volume-display">
+                    <span class="volume-value">{{ totalVolume.toFixed(2) }}</span>
+                    <span class="volume-unit">m³</span>
+                  </div>
+                </el-form-item>
+              </el-col>
+            </el-row>
+          </div>
+        </el-collapse-item>
 
-      <!-- 备注 -->
-      <el-divider content-position="left">备注信息</el-divider>
+        <!-- 林分特征 - 可折叠 -->
+        <el-collapse-item name="feature">
+          <template #title>
+            <span class="section-title">林分特征</span>
+            <el-tag v-if="hasFeatureData" type="success" size="small" class="section-tag">已填</el-tag>
+          </template>
+          
+          <div class="form-section">
+            <el-row :gutter="isMobile ? 0 : 16">
+              <el-col :span="isMobile ? 24 : 8">
+                <el-form-item label="林龄 (年)" prop="standAge">
+                  <el-input-number 
+                    v-model="formData.standAge" 
+                    :min="1"
+                    :max="200"
+                    style="width: 100%"
+                    :size="isMobile ? 'large' : 'default'"
+                  />
+                </el-form-item>
+              </el-col>
+              <el-col :span="isMobile ? 24 : 8">
+                <el-form-item label="郁闭度" prop="canopyDensity">
+                  <el-slider 
+                    v-model="formData.canopyDensity" 
+                    :max="1"
+                    :step="0.1"
+                    show-stops
+                    :marks="{0: '0', 0.5: '0.5', 1: '1'}"
+                  />
+                </el-form-item>
+              </el-col>
+              <el-col :span="isMobile ? 24 : 8">
+                <el-form-item label="立地等级" prop="siteClass">
+                  <el-rate
+                    v-model="formData.siteClass"
+                    :max="5"
+                    :colors="['#99A9BF', '#F7BA2A', '#FF9900']"
+                    show-text
+                    :texts="['Ⅴ', 'Ⅳ', 'Ⅲ', 'Ⅱ', 'Ⅰ']"
+                  />
+                </el-form-item>
+              </el-col>
+            </el-row>
 
-      <el-form-item label="备注" prop="remark">
-        <el-input 
-          v-model="formData.remark" 
-          type="textarea"
-          :rows="3"
-          placeholder="输入备注信息..."
-          maxlength="500"
-          show-word-limit
-        />
-      </el-form-item>
+            <el-row :gutter="isMobile ? 0 : 16">
+              <el-col :span="isMobile ? 24 : 8">
+                <el-form-item label="平均胸径(cm)" prop="avgDbh">
+                  <el-input-number 
+                    v-model="formData.avgDbh" 
+                    :min="0"
+                    :precision="1"
+                    style="width: 100%"
+                    :size="isMobile ? 'large' : 'default'"
+                  />
+                </el-form-item>
+              </el-col>
+              <el-col :span="isMobile ? 24 : 8">
+                <el-form-item label="平均树高(m)" prop="avgHeight">
+                  <el-input-number 
+                    v-model="formData.avgHeight" 
+                    :min="0"
+                    :precision="2"
+                    style="width: 100%"
+                    :size="isMobile ? 'large' : 'default'"
+                  />
+                </el-form-item>
+              </el-col>
+              <el-col :span="isMobile ? 24 : 8">
+                <el-form-item label="海拔(m)" prop="elevation">
+                  <el-input-number 
+                    v-model="formData.elevation" 
+                    :min="0"
+                    :precision="0"
+                    style="width: 100%"
+                    :size="isMobile ? 'large' : 'default'"
+                  />
+                </el-form-item>
+              </el-col>
+            </el-row>
+          </div>
+        </el-collapse-item>
+
+        <!-- 地形因子 - 可折叠 -->
+        <el-collapse-item name="terrain">
+          <template #title>
+            <span class="section-title">地形因子</span>
+            <el-tag v-if="hasTerrainData" type="success" size="small" class="section-tag">已填</el-tag>
+          </template>
+          
+          <div class="form-section">
+            <el-row :gutter="isMobile ? 0 : 16">
+              <el-col :span="isMobile ? 24 : 12">
+                <el-form-item label="坡度(°)" prop="slope">
+                  <el-input-number 
+                    v-model="formData.slope" 
+                    :min="0"
+                    :max="90"
+                    :precision="2"
+                    style="width: 100%"
+                    :size="isMobile ? 'large' : 'default'"
+                  />
+                </el-form-item>
+              </el-col>
+              <el-col :span="isMobile ? 24 : 12">
+                <el-form-item label="坡向" prop="aspect">
+                  <el-select 
+                    v-model="formData.aspect" 
+                    placeholder="选择坡向"
+                    style="width: 100%"
+                    clearable
+                    :size="isMobile ? 'large' : 'default'"
+                  >
+                    <el-option label="北" value="北" />
+                    <el-option label="东北" value="东北" />
+                    <el-option label="东" value="东" />
+                    <el-option label="东南" value="东南" />
+                    <el-option label="南" value="南" />
+                    <el-option label="西南" value="西南" />
+                    <el-option label="西" value="西" />
+                    <el-option label="西北" value="西北" />
+                    <el-option label="无" value="无" />
+                  </el-select>
+                </el-form-item>
+              </el-col>
+            </el-row>
+
+            <el-form-item label="立地类型" prop="siteType">
+              <el-input 
+                v-model="formData.siteType" 
+                placeholder="如：低山黄壤、低山红壤"
+                :size="isMobile ? 'large' : 'default'"
+              />
+            </el-form-item>
+          </div>
+        </el-collapse-item>
+
+        <!-- 树种组成 - 可折叠 -->
+        <el-collapse-item name="composition">
+          <template #title>
+            <span class="section-title">树种组成</span>
+            <el-tag v-if="hasCompositionData" type="success" size="small" class="section-tag">已填</el-tag>
+          </template>
+          
+          <div class="form-section">
+            <div class="composition-list">
+              <div 
+                v-for="(item, index) in formData.speciesComposition" 
+                :key="index"
+                class="composition-item"
+              >
+                <el-row :gutter="8">
+                  <el-col :span="12">
+                    <el-select 
+                      v-model="item.species" 
+                      placeholder="选择树种"
+                      style="width: 100%"
+                      :size="isMobile ? 'large' : 'default'"
+                    >
+                      <el-option
+                        v-for="species in speciesOptions"
+                        :key="species"
+                        :label="species"
+                        :value="species"
+                      />
+                    </el-select>
+                  </el-col>
+                  <el-col :span="8">
+                    <el-input-number 
+                      v-model="item.ratio" 
+                      :min="0"
+                      :max="1"
+                      :precision="2"
+                      :step="0.1"
+                      style="width: 100%"
+                      :size="isMobile ? 'large' : 'default'"
+                      placeholder="比例"
+                    />
+                  </el-col>
+                  <el-col :span="4">
+                    <el-button 
+                      type="danger" 
+                      link 
+                      :size="isMobile ? 'large' : 'default'"
+                      @click="removeCompositionItem(index)"
+                    >
+                      <el-icon><Delete /></el-icon>
+                    </el-button>
+                  </el-col>
+                </el-row>
+              </div>
+              <el-button 
+                type="primary" 
+                link 
+                :size="isMobile ? 'large' : 'default'"
+                @click="addCompositionItem"
+                class="add-composition-btn"
+              >
+                <el-icon><Plus /></el-icon> 添加树种
+              </el-button>
+            </div>
+          </div>
+        </el-collapse-item>
+
+        <!-- 调查信息 - 可折叠 -->
+        <el-collapse-item name="survey">
+          <template #title>
+            <span class="section-title">调查信息</span>
+            <el-tag v-if="hasSurveyData" type="success" size="small" class="section-tag">已填</el-tag>
+          </template>
+          
+          <div class="form-section">
+            <el-row :gutter="isMobile ? 0 : 16">
+              <el-col :span="isMobile ? 24 : 12">
+                <el-form-item label="调查日期" prop="surveyDate">
+                  <el-date-picker
+                    v-model="formData.surveyDate"
+                    type="date"
+                    placeholder="选择日期"
+                    style="width: 100%"
+                    value-format="YYYY-MM-DD"
+                    :size="isMobile ? 'large' : 'default'"
+                  />
+                </el-form-item>
+              </el-col>
+              <el-col :span="isMobile ? 24 : 12">
+                <el-form-item label="调查员" prop="surveyor">
+                  <el-input 
+                    v-model="formData.surveyor" 
+                    placeholder="调查员姓名"
+                    :size="isMobile ? 'large' : 'default'"
+                  />
+                </el-form-item>
+              </el-col>
+            </el-row>
+          </div>
+        </el-collapse-item>
+
+        <!-- 空间信息 - 可折叠 -->
+        <el-collapse-item name="location">
+          <template #title>
+            <span class="section-title">空间信息</span>
+            <el-tag v-if="hasLocation" type="success" size="small" class="section-tag">已定位</el-tag>
+          </template>
+          
+          <div class="form-section">
+            <el-row :gutter="isMobile ? 0 : 16">
+              <el-col :span="isMobile ? 24 : 12">
+                <el-form-item label="中心经度" prop="centerLon">
+                  <el-input-number 
+                    v-model="formData.centerLon" 
+                    :precision="6"
+                    style="width: 100%"
+                    :size="isMobile ? 'large' : 'default'"
+                  />
+                </el-form-item>
+              </el-col>
+              <el-col :span="isMobile ? 24 : 12">
+                <el-form-item label="中心纬度" prop="centerLat">
+                  <el-input-number 
+                    v-model="formData.centerLat" 
+                    :precision="6"
+                    style="width: 100%"
+                    :size="isMobile ? 'large' : 'default'"
+                  />
+                </el-form-item>
+              </el-col>
+            </el-row>
+
+            <el-form-item>
+              <el-button 
+                type="primary" 
+                plain 
+                :size="isMobile ? 'large' : 'default'"
+                @click="startMapSelection"
+              >
+                <el-icon><MapLocation /></el-icon>
+                {{ hasLocation ? '重新选点' : '地图选点' }}
+              </el-button>
+              <el-button 
+                v-if="hasLocation" 
+                :size="isMobile ? 'large' : 'default'"
+                @click="clearLocation"
+              >
+                <el-icon><Delete /></el-icon>
+                清除位置
+              </el-button>
+            </el-form-item>
+          </div>
+        </el-collapse-item>
+
+        <!-- 备注信息 - 可折叠 -->
+        <el-collapse-item name="remark">
+          <template #title>
+            <span class="section-title">备注信息</span>
+            <el-tag v-if="formData.remark" type="success" size="small" class="section-tag">已填</el-tag>
+          </template>
+          
+          <div class="form-section">
+            <el-form-item label="备注" prop="remark">
+              <el-input 
+                v-model="formData.remark" 
+                type="textarea"
+                :rows="isMobile ? 4 : 3"
+                maxlength="500"
+                show-word-limit
+                :size="isMobile ? 'large' : 'default'"
+              />
+            </el-form-item>
+          </div>
+        </el-collapse-item>
+      </el-collapse>
     </el-form>
 
-    <!-- 底部操作栏 -->
+    <!-- 底部操作栏 - 移动端固定底部 -->
     <template #footer>
-      <div class="drawer-footer">
+      <div class="drawer-footer" :class="{ 'mobile-footer': isMobile }">
         <el-popconfirm
           v-if="isEdit"
-          title="确定要删除这个林分吗？此操作不可恢复！"
+          title="确定要删除这个林分吗？"
           confirm-button-text="删除"
           confirm-button-type="danger"
           cancel-button-text="取消"
           @confirm="handleDelete"
         >
           <template #reference>
-            <el-button type="danger" plain :loading="submitting">
+            <el-button 
+              type="danger" 
+              plain 
+              :loading="submitting"
+              :size="isMobile ? 'large' : 'default'"
+            >
               <el-icon><Delete /></el-icon>
-              删除
+              <span v-if="!isMobile">删除</span>
             </el-button>
           </template>
         </el-popconfirm>
         
         <div class="right-actions">
-          <el-button @click="handleCancel">取消</el-button>
+          <el-button 
+            @click="handleCancel"
+            :size="isMobile ? 'large' : 'default'"
+          >
+            取消
+          </el-button>
           <el-button 
             type="primary" 
             :loading="submitting"
             @click="handleSubmit"
+            :size="isMobile ? 'large' : 'default'"
+            class="submit-btn"
           >
             <el-icon><Check /></el-icon>
-            {{ isEdit ? '保存修改' : '创建林分' }}
+            {{ isEdit ? '保存' : '创建' }}
           </el-button>
         </div>
       </div>
@@ -241,65 +488,86 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Document, MapLocation, Delete, Check } from '@element-plus/icons-vue'
+import { Document, MapLocation, Delete, Check, Plus } from '@element-plus/icons-vue'
 import { SPECIES_COLORS } from '@/config'
 
 const props = defineProps({
-  modelValue: {
-    type: Boolean,
-    default: false
-  },
-  editData: {
-    type: Object,
-    default: null
-  },
+  modelValue: Boolean,
+  editData: Object,
   speciesOptions: {
     type: Array,
     default: () => ['马尾松', '杉木', '樟树', '枫香', '木荷', '毛竹', '油茶', '未知']
   }
 })
 
-const emit = defineEmits([
-  'update:modelValue',
-  'submit',
-  'delete',
-  'location-change',
-  'start-map-selection'
-])
+const emit = defineEmits(['update:modelValue', 'submit', 'delete', 'location-change', 'start-map-selection'])
 
-// 表单引用
 const formRef = ref(null)
 const submitting = ref(false)
 
-// 计算属性
+// 移动端检测
+const isMobile = ref(false)
+const checkMobile = () => {
+  isMobile.value = window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+}
+
+onMounted(() => {
+  checkMobile()
+  window.addEventListener('resize', checkMobile)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', checkMobile)
+})
+
+// 折叠面板控制
+const activeSections = ref(['area', 'feature']) // 默认展开前两个
+const totalSections = 6
+
+const currentSection = computed(() => {
+  const sectionMap = { 'area': 1, 'feature': 2, 'terrain': 3, 'composition': 4, 'survey': 5, 'location': 6, 'remark': 7 }
+  return sectionMap[activeSections.value[activeSections.value.length - 1]] || 1
+})
+
+const progressPercent = computed(() => (currentSection.value / totalSections) * 100)
+
+// 数据填充状态检测
+const hasAreaData = computed(() => formData.value.areaHa && formData.value.volumePerHa)
+const hasFeatureData = computed(() => formData.value.standAge || formData.value.avgDbh || formData.value.avgHeight)
+const hasTerrainData = computed(() => formData.value.slope || formData.value.aspect || formData.value.siteType)
+const hasCompositionData = computed(() => formData.value.speciesComposition && formData.value.speciesComposition.length > 0)
+const hasSurveyData = computed(() => formData.value.surveyDate || formData.value.surveyor)
+
 const visible = computed({
   get: () => props.modelValue,
   set: (val) => emit('update:modelValue', val)
 })
 
-const isEdit = computed(() => !!props.editData?.standId || !!props.editData?.id)
+const isEdit = computed(() => !!props.editData?.standId)
+const hasLocation = computed(() => formData.value.centerLon && formData.value.centerLat)
+const totalVolume = computed(() => (formData.value.areaHa || 0) * (formData.value.volumePerHa || 0))
 
-const hasLocation = computed(() => {
-  return formData.value.centerLon && formData.value.centerLat
-})
-
-const totalVolume = computed(() => {
-  return (formData.value.area || 0) * (formData.value.volumePerHa || 0)
-})
-
-// 表单数据
 const defaultForm = {
   xiaoBanCode: '',
   standName: '',
   dominantSpecies: '',
   origin: '天然',
-  area: undefined,
+  areaHa: undefined,
   volumePerHa: undefined,
   standAge: undefined,
   canopyDensity: 0.7,
   siteClass: 3,
+  avgDbh: undefined,
+  avgHeight: undefined,
+  elevation: undefined,
+  slope: undefined,
+  aspect: '',
+  siteType: '',
+  speciesComposition: [],
+  surveyDate: '',
+  surveyor: '',
   centerLon: undefined,
   centerLat: undefined,
   remark: ''
@@ -307,66 +575,58 @@ const defaultForm = {
 
 const formData = ref({ ...defaultForm })
 
-// 表单校验规则
 const formRules = {
   xiaoBanCode: [
     { required: true, message: '请输入林分编号', trigger: 'blur' },
     { pattern: /^\d{2}-\d{2}$/, message: '格式如：01-05', trigger: 'blur' }
   ],
-  standName: [
-    { required: true, message: '请输入林分名称', trigger: 'blur' },
-    { min: 2, max: 50, message: '长度在 2 到 50 个字符', trigger: 'blur' }
-  ],
-  dominantSpecies: [
-    { required: true, message: '请选择优势树种', trigger: 'change' }
-  ],
-  origin: [
-    { required: true, message: '请选择起源类型', trigger: 'change' }
-  ],
-  area: [
-    { required: true, message: '请输入面积', trigger: 'blur' },
-    { type: 'number', min: 0.01, message: '面积必须大于0', trigger: 'blur' }
-  ],
-  volumePerHa: [
-    { required: true, message: '请输入每公顷蓄积', trigger: 'blur' }
-  ]
+  standName: [{ required: true, message: '请输入林分名称', trigger: 'blur' }],
+  dominantSpecies: [{ required: true, message: '请选择优势树种', trigger: 'change' }],
+  origin: [{ required: true, message: '请选择起源类型', trigger: 'change' }],
+  areaHa: [{ required: true, message: '请输入面积', trigger: 'blur' }],
+  volumePerHa: [{ required: true, message: '请输入每公顷蓄积', trigger: 'blur' }]
 }
 
-// 监听编辑数据变化
 watch(() => props.editData, (newVal) => {
-  if (newVal) {
-    // 兼容 area 和 areaHa 两种字段名
-    const areaValue = newVal.area ?? newVal.areaHa
-    
+  if (newVal?.standId) {
     formData.value = {
-      ...defaultForm,
-      ...newVal,
-      // 确保数值类型正确
-      area: areaValue ? Number(areaValue) : undefined,
+      standId: newVal.standId,
+      xiaoBanCode: newVal.xiaoBanCode || '',
+      standName: newVal.standName || '',
+      dominantSpecies: newVal.dominantSpecies || '',
+      origin: newVal.origin || '天然',
+      areaHa: newVal.areaHa ? Number(newVal.areaHa) : undefined,
       volumePerHa: newVal.volumePerHa ? Number(newVal.volumePerHa) : undefined,
       standAge: newVal.standAge ? Number(newVal.standAge) : undefined,
       canopyDensity: newVal.canopyDensity ? Number(newVal.canopyDensity) : 0.7,
       siteClass: newVal.siteClass ? Number(newVal.siteClass) : 3,
+      avgDbh: newVal.avgDbh ? Number(newVal.avgDbh) : undefined,
+      avgHeight: newVal.avgHeight ? Number(newVal.avgHeight) : undefined,
+      elevation: newVal.elevation ? Number(newVal.elevation) : undefined,
+      slope: newVal.slope ? Number(newVal.slope) : undefined,
+      aspect: newVal.aspect || '',
+      siteType: newVal.siteType || '',
+      speciesComposition: Array.isArray(newVal.speciesComposition) ? newVal.speciesComposition : [],
+      surveyDate: newVal.surveyDate || '',
+      surveyor: newVal.surveyor || '',
       centerLon: newVal.centerLon ? Number(newVal.centerLon) : undefined,
-      centerLat: newVal.centerLat ? Number(newVal.centerLat) : undefined
+      centerLat: newVal.centerLat ? Number(newVal.centerLat) : undefined,
+      remark: newVal.remark || ''
     }
+    // 编辑时展开所有已填写的部分
+    activeSections.value = ['area', 'feature', 'terrain', 'composition', 'survey', 'location', 'remark']
   } else {
     formData.value = { ...defaultForm }
+    activeSections.value = ['area', 'feature']
   }
 }, { immediate: true })
 
-// 方法
-const getSpeciesColor = (species) => {
-  return SPECIES_COLORS[species] || '#909399'
+const addCompositionItem = () => {
+  formData.value.speciesComposition.push({ species: '', ratio: 0 })
 }
 
-const emitLocationChange = () => {
-  if (hasLocation.value) {
-    emit('location-change', {
-      lon: formData.value.centerLon,
-      lat: formData.value.centerLat
-    })
-  }
+const removeCompositionItem = (index) => {
+  formData.value.speciesComposition.splice(index, 1)
 }
 
 const startMapSelection = () => {
@@ -382,21 +642,19 @@ const clearLocation = () => {
 const handleSubmit = async () => {
   try {
     await formRef.value.validate()
-    
     submitting.value = true
     
     const submitData = {
       ...formData.value,
-      // 确保面积字段同时使用 area 和 areaHa 两种命名，兼容不同API
-      areaHa: formData.value.area,
-      area: formData.value.area,
       totalVolume: totalVolume.value
     }
     
-    emit('submit', submitData, isEdit.value)
+    if (isEdit.value) {
+      submitData.standId = props.editData.standId
+    }
     
+    emit('submit', submitData, isEdit.value)
   } catch (error) {
-    console.error('表单校验失败:', error)
     ElMessage.warning('请检查表单填写是否正确')
   } finally {
     submitting.value = false
@@ -417,19 +675,17 @@ const handleClosed = () => {
   submitting.value = false
 }
 
-// 外部调用：设置地图选点坐标
 const setMapLocation = (lon, lat) => {
   formData.value.centerLon = Number(lon.toFixed(6))
   formData.value.centerLat = Number(lat.toFixed(6))
   ElMessage.success(`已设置位置：${lon.toFixed(4)}, ${lat.toFixed(4)}`)
 }
 
-defineExpose({
-  setMapLocation
-})
+defineExpose({ setMapLocation })
 </script>
 
 <style scoped>
+/* 基础样式 */
 .stand-edit-drawer :deep(.el-drawer__header) {
   margin-bottom: 0;
   padding: 16px 20px;
@@ -453,23 +709,64 @@ defineExpose({
   font-weight: 500;
 }
 
-.color-dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  display: inline-block;
+.section-title {
+  font-weight: 600;
+  color: #2E7D32;
 }
 
-.location-title {
+.section-tag {
+  margin-left: 8px;
+}
+
+.form-section {
+  padding: 0 8px;
+}
+
+.total-volume-display {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  align-items: baseline;
+  gap: 4px;
+  padding: 8px 0;
 }
 
-.volume-statistic :deep(.el-statistic__content) {
-  color: #D32F2F;
+.volume-value {
   font-size: 20px;
   font-weight: bold;
+  color: #D32F2F;
+}
+
+.volume-unit {
+  font-size: 14px;
+  color: #606266;
+}
+
+.composition-list {
+  padding: 8px 0;
+}
+
+.composition-item {
+  margin-bottom: 12px;
+  padding: 12px;
+  background: #f5f7fa;
+  border-radius: 8px;
+}
+
+.add-composition-btn {
+  margin-top: 8px;
+  width: 100%;
+}
+
+.origin-radio {
+  display: flex;
+  width: 100%;
+}
+
+.origin-radio :deep(.el-radio-button) {
+  flex: 1;
+}
+
+.origin-radio :deep(.el-radio-button__inner) {
+  width: 100%;
 }
 
 .drawer-footer {
@@ -485,7 +782,140 @@ defineExpose({
   gap: 12px;
 }
 
-:deep(.el-input-number .el-input__inner) {
-  text-align: left;
+/* 移动端优化样式 */
+.mobile-drawer :deep(.el-drawer__header) {
+  padding: 12px 16px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: linear-gradient(135deg, #f1f8e9 0%, #fff 100%);
+}
+
+.mobile-progress {
+  position: sticky;
+  top: 56px;
+  z-index: 9;
+  background: #fff;
+  padding: 8px 16px;
+  border-bottom: 1px solid #e4e7ed;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.progress-bar {
+  flex: 1;
+  height: 4px;
+  background: #e4e7ed;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #67C23A, #2E7D32);
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  font-size: 12px;
+  color: #606266;
+  min-width: 40px;
+  text-align: right;
+}
+
+.mobile-form {
+  padding: 12px 16px 80px 16px; /* 底部留出空间给固定按钮 */
+}
+
+.mobile-form :deep(.el-form-item) {
+  margin-bottom: 20px;
+}
+
+.mobile-form :deep(.el-form-item__label) {
+  font-size: 14px;
+  font-weight: 500;
+  color: #303133;
+  margin-bottom: 8px;
+  padding: 0;
+  line-height: 1.5;
+}
+
+.mobile-form :deep(.el-input__inner),
+.mobile-form :deep(.el-input-number__input) {
+  height: 44px;
+  font-size: 16px; /* 防止iOS缩放 */
+}
+
+.mobile-form :deep(.el-select) {
+  width: 100%;
+}
+
+.mobile-form :deep(.el-slider__runway) {
+  margin: 16px 0;
+}
+
+.mobile-collapse {
+  border: none;
+}
+
+.mobile-collapse :deep(.el-collapse-item__header) {
+  font-size: 15px;
+  font-weight: 600;
+  color: #2E7D32;
+  padding: 12px 8px;
+  border-bottom: 1px solid #e4e7ed;
+  background: #fafafa;
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+
+.mobile-collapse :deep(.el-collapse-item__content) {
+  padding-bottom: 16px;
+}
+
+.mobile-collapse :deep(.el-collapse-item__wrap) {
+  border: none;
+  background: transparent;
+}
+
+.mobile-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #fff;
+  padding: 12px 16px;
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+  z-index: 100;
+}
+
+.mobile-footer .submit-btn {
+  flex: 1;
+}
+
+/* 触摸设备优化 */
+@media (hover: none) and (pointer: coarse) {
+  .mobile-form :deep(.el-input__inner),
+  .mobile-form :deep(.el-button),
+  .mobile-form :deep(.el-select) {
+    min-height: 44px;
+  }
+  
+  .mobile-form :deep(.el-slider__button) {
+    width: 24px;
+    height: 24px;
+  }
+}
+
+/* 小屏幕优化 */
+@media (max-width: 375px) {
+  .mobile-form {
+    padding: 8px 12px 80px 12px;
+  }
+  
+  .mobile-form :deep(.el-form-item__label) {
+    font-size: 13px;
+  }
 }
 </style>
