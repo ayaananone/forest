@@ -84,6 +84,7 @@
             </el-input-number>
           </el-form-item>
         </el-col>
+        
         <el-col :span="12">
           <el-form-item label="每公顷蓄积" prop="volumePerHa">
             <el-input-number 
@@ -126,6 +127,7 @@
             </el-input-number>
           </el-form-item>
         </el-col>
+        
         <el-col :span="12">
           <el-form-item label="郁闭度" prop="canopyDensity">
             <el-slider 
@@ -277,7 +279,7 @@ const visible = computed({
   set: (val) => emit('update:modelValue', val)
 })
 
-const isEdit = computed(() => !!props.editData?.id || !!props.editData?.xiaoBanCode)
+const isEdit = computed(() => !!props.editData?.standId || !!props.editData?.id)
 
 const hasLocation = computed(() => {
   return formData.value.centerLon && formData.value.centerLat
@@ -333,6 +335,9 @@ const formRules = {
 // 监听编辑数据变化
 watch(() => props.editData, (newVal) => {
   if (newVal) {
+    // 兼容 area 和 areaHa 两种字段名
+    const areaValue = newVal.area ?? newVal.areaHa
+    
     formData.value = {
       ...defaultForm,
       ...newVal,
@@ -382,6 +387,7 @@ const handleSubmit = async () => {
     
     const submitData = {
       ...formData.value,
+      // 确保面积字段同时使用 area 和 areaHa 两种命名，兼容不同API
       areaHa: formData.value.area,
       area: formData.value.area,
       totalVolume: totalVolume.value
@@ -392,6 +398,8 @@ const handleSubmit = async () => {
   } catch (error) {
     console.error('表单校验失败:', error)
     ElMessage.warning('请检查表单填写是否正确')
+  } finally {
+    submitting.value = false
   }
 }
 

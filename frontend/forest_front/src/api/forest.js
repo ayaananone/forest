@@ -23,15 +23,34 @@ function transformStand(backendData) {
         standId: backendData.standId,              // 数据库主键，用于API调用
         standNo: backendData.xiaoBanCode,          // 小班号，仅展示
         standName: backendData.standName,
-        area: backendData.areaHa,                    
+        xiaoBanCode: backendData.xiaoBanCode,      // 林分编号
+        area: backendData.areaHa,                   
+        areaHa: backendData.areaHa,                // 兼容两种命名
         dominantSpecies: backendData.dominantSpecies,
         volumePerHa: backendData.volumePerHa,      // m³/ha
         totalVolume: backendData.totalVolume,      // m³ (后端已计算)
         centerLon: backendData.centerLon,
         centerLat: backendData.centerLat,
         age: backendData.standAge,
+        standAge: backendData.standAge,            // 兼容两种命名
         density: backendData.canopyDensity,        // 郁闭度
-        origin: backendData.origin                 // 起源
+        canopyDensity: backendData.canopyDensity,  // 兼容两种命名
+        origin: backendData.origin,                // 起源
+        siteType: backendData.siteType,            // 立地类型
+        siteClass: backendData.siteClass,          // 立地等级
+        avgHeight: backendData.avgHeight,          // 平均树高
+        avgDbh: backendData.avgDbh,                // 平均胸径
+        speciesComposition: backendData.speciesComposition, // 树种组成
+        elevation: backendData.elevation,          // 海拔
+        slope: backendData.slope,                  // 坡度
+        aspect: backendData.aspect,                // 坡向
+        surveyDate: backendData.surveyDate,        // 调查日期
+        surveyor: backendData.surveyor,            // 调查员
+        remark: backendData.remark,                // 备注
+        createTime: backendData.createTime,
+        updateTime: backendData.updateTime,
+        createBy: backendData.createBy,
+        updateBy: backendData.updateBy
     }
 }
 
@@ -138,7 +157,9 @@ export async function fetchStandDetail(standId) {
  */
 export async function createStand(standData) {
     try {
+        console.log('createStand 提交数据:', standData)
         const data = await request.post('/stands', standData)
+        console.log('createStand 返回数据:', data)
         return transformStand(data)
     } catch (error) {
         console.error('创建林分失败:', error)
@@ -151,7 +172,9 @@ export async function createStand(standData) {
  */
 export async function updateStand(standId, standData) {
     try {
+        console.log('updateStand 提交数据:', standId, standData)
         const data = await request.put(`/stands/${standId}`, standData)
+        console.log('updateStand 返回数据:', data)
         return transformStand(data)
     } catch (error) {
         console.error('更新林分失败:', error)
@@ -164,7 +187,9 @@ export async function updateStand(standId, standData) {
  */
 export async function deleteStand(standId) {
     try {
+        console.log('deleteStand 删除林分:', standId)
         await request.delete(`/stands/${standId}`)
+        console.log('deleteStand 删除成功')
         return true
     } catch (error) {
         console.error('删除林分失败:', error)
