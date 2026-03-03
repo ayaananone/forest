@@ -36,7 +36,6 @@
         <result column="deleted" property="deleted"/>
     </resultMap>
 
-    <!-- 基础列 - 无 geom -->
     <sql id="Base_Column_List">
         stand_id, zone_id, lin_ban, xiao_ban, xiao_ban_code, stand_name,
         area_ha, site_type, origin, stand_age, canopy_density,
@@ -59,14 +58,6 @@
         SELECT <include refid="Base_Column_List"/>
         FROM forest_stand
         WHERE stand_id = #{id}
-        AND deleted = 0
-    </select>
-
-    <!-- 根据编号查询 -->
-    <select id="findByXiaoBanCode" resultMap="BaseResultMap">
-        SELECT <include refid="Base_Column_List"/>
-        FROM forest_stand
-        WHERE xiao_ban_code = #{code}
         AND deleted = 0
     </select>
 

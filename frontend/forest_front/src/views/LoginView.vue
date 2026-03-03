@@ -1,4 +1,3 @@
-<!-- /src/views/LoginView.vue -->
 <template>
   <div class="login-page">
     <!-- 动态森林背景 -->
@@ -524,9 +523,10 @@ const handleLogin = async () => {
   background: #fff;
 }
 
+/* 修复2: 表单卡片宽度改为400px，确保有足够空间 */
 .form-card {
   width: 100%;
-  max-width: 340px;
+  max-width: 400px;
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -552,6 +552,7 @@ const handleLogin = async () => {
 /* 输入框组 */
 .input-group {
   margin-bottom: 5px;
+  width: 100%; /* 确保占满 */
 }
 
 .input-label {
@@ -562,10 +563,12 @@ const handleLogin = async () => {
   margin-bottom: 8px;
 }
 
+/* 修复1: 输入框包装器宽度改为100% */
 .input-wrapper {
   position: relative;
   display: flex;
   align-items: center;
+  width: 100%; /* 从 auto 改为 100% */
 }
 
 .input-icon {
@@ -611,6 +614,7 @@ const handleLogin = async () => {
   justify-content: space-between;
   align-items: center;
   margin: 5px 0 10px;
+  width: 100%; /* 确保占满 */
 }
 
 .remember-check :deep(.el-checkbox__label) {
@@ -647,6 +651,7 @@ const handleLogin = async () => {
   align-items: center;
   justify-content: center;
   gap: 8px;
+  margin-top: 10px;
 }
 
 .login-button:hover {
@@ -742,23 +747,162 @@ const handleLogin = async () => {
 @media (max-width: 768px) {
   .login-container {
     flex-direction: column;
+    width: 95%;
     height: auto;
-    max-height: 95vh;
+    max-height: 92vh;
     overflow-y: auto;
+    margin: 20px auto;
   }
   
   .brand-section {
-    padding: 30px;
-    min-height: 280px;
+    flex: none;
+    padding: 30px 20px;
+    min-height: 200px;
   }
   
   .brand-title {
-    font-size: 36px;
-    letter-spacing: 8px;
+    font-size: 32px;
+    letter-spacing: 6px;
+  }
+  
+  .brand-subtitle {
+    font-size: 11px;
+  }
+  
+  .brand-features {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+  }
+  
+  .feature-item {
+    padding: 6px 12px;
+  }
+  
+  .feature-text {
+    font-size: 11px;
   }
   
   .form-section {
-    padding: 30px;
+    padding: 30px 24px;
+  }
+  
+  .form-card {
+    max-width: 100%; /* 移动端占满 */
+    padding: 0;
+  }
+  
+  .welcome-text {
+    font-size: 24px;
   }
 }
+
+@media (max-width: 480px) {
+  .login-page {
+    padding: 0;
+    align-items: flex-start;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    height: auto;
+    min-height: 100vh;
+    overflow-y: auto;
+  }
+  
+  .login-container {
+    width: 100%;
+    margin: 0;
+    border-radius: 0;
+    max-height: none;
+    box-shadow: none;
+  }
+  
+  .brand-section {
+    min-height: 160px;
+    padding: 24px 16px;
+  }
+  
+  .logo-animation {
+    width: 70px;
+    height: 70px;
+    margin-bottom: 16px;
+  }
+  
+  .brand-title {
+    font-size: 26px;
+    letter-spacing: 4px;
+    margin-bottom: 6px;
+  }
+  
+  .brand-subtitle {
+    font-size: 10px;
+    margin-bottom: 20px;
+  }
+  
+  .brand-features {
+    display: none;
+  }
+  
+  .form-section {
+    padding: 24px 20px;
+  }
+  
+  .welcome-text {
+    font-size: 22px;
+    margin-bottom: 6px;
+  }
+  
+  .welcome-subtitle {
+    font-size: 13px;
+  }
+  
+  /* 增大触摸目标 */
+  :deep(.custom-input .el-input__inner) {
+    height: 48px;
+    font-size: 16px;
+  }
+  
+  .input-wrapper {
+    min-height: 48px;
+  }
+  
+  .login-button {
+    height: 48px;
+    font-size: 16px;
+  }
+  
+  .form-options {
+    margin: 8px 0 16px;
+  }
+  
+  .register-section {
+    padding: 12px 0;
+  }
+}
+
+/* 修复3: 添加表单和输入框宽度控制 */
+/* 确保表单占满 */
+.login-form {
+  width: 100%;
+}
+
+/* 确保表单项占满 */
+.login-form :deep(.el-form-item) {
+  width: 100%;
+}
+
+.login-form :deep(.el-form-item__content) {
+  width: 100% !important;
+}
+
+/* 确保 Element Plus 输入框占满 */
+.login-form :deep(.el-input) {
+  width: 100% !important;
+}
+
+.login-form :deep(.el-input__wrapper) {
+  width: 100% !important;
+}
+
+
 </style>

@@ -159,7 +159,7 @@ const handleClose = () => {
  * @param {string} format - 导出格式：csv、excel、json
  */
 const handleDownload = async (format = 'csv') => {
-  // 获取林分ID，优先使用standNo（小班编码，如"02-05"），其次使用id
+  // 获取林分ID，优先id
   const standId = props.content?.id
   
   if (!standId) {

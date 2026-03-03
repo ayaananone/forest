@@ -75,13 +75,11 @@ public class ForestStandServiceImpl implements ForestStandService {
         return stats;
     }
 
-    // ==================== 新增CRUD方法 ====================
-
     @Override
     @Transactional
     public StandDTO createStand(StandDTO dto, String operator) {
         // 检查编号重复
-        ForestStand exist = standMapper.findByXiaoBanCode(dto.getXiaoBanCode());
+        ForestStand exist = standMapper.findById(dto.getStandId());
         if (exist != null) {
             throw new RuntimeException("林分编号已存在: " + dto.getXiaoBanCode());
         }
@@ -193,16 +191,6 @@ public class ForestStandServiceImpl implements ForestStandService {
         }
         return excludeId == null || !excludeId.equals(stand.getStandId());
     }
-
-    @Override
-    public StandDTO getStandByCode(String xiaoBanCode) {
-        ForestStand stand = standMapper.findByXiaoBanCode(xiaoBanCode);
-        if (stand == null) {
-            throw new RuntimeException("林分不存在: " + xiaoBanCode);
-        }
-        return convertToDTO(stand);
-    }
-
     // ==================== 私有方法 ====================
 
     private void parseXiaoBanCode(ForestStand stand) {

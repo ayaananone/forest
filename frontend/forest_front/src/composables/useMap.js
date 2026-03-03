@@ -7,7 +7,6 @@ import { fromLonLat, toLonLat } from 'ol/proj'
 import { defaults as defaultControls, ScaleLine, FullScreen, ZoomSlider, MousePosition, OverviewMap } from 'ol/control'
 import { defaults as defaultInteractions, DragRotateAndZoom } from 'ol/interaction'
 import { createStringXY } from 'ol/coordinate'
-import { Tile as TileLayer } from 'ol/layer'
 import { XYZ } from 'ol/source'
 import { Style, Stroke, Fill, Circle as CircleStyle } from 'ol/style'
 
@@ -113,8 +112,8 @@ export function useMap(targetId, options = {}) {
 
             // 延迟更新尺寸
             setTimeout(() => {
-            map.value?.updateSize()
-            console.log('✓ 强制更新地图尺寸')
+                map.value?.updateSize()
+                console.log('✓ 强制更新地图尺寸')
             }, 200)
 
             initializeLayers(baseSource)
@@ -131,6 +130,28 @@ export function useMap(targetId, options = {}) {
             window.addEventListener('resize', () => {
                 setTimeout(() => map.value?.updateSize(), 100)
             })
+
+            // ==================== 修复 willReadFrequently 警告 ====================
+            setTimeout(() => {
+                try {
+                    const canvas = container.querySelector('canvas')
+                    if (canvas && !canvas.dataset.optimized) {
+                        const ctx = canvas.getContext('2d', { willReadFrequently: true })
+                        if (ctx) {
+                            canvas.dataset.optimized = 'true'
+                            console.log('✓ Canvas 已优化 willReadFrequently')
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Canvas 优化失败:', e)
+                }
+            }, 300)
+
+            // ==================== 移动端性能优化 ====================
+            if (window.innerWidth <= 768) {
+                map.value.setPixelRatio(1)
+                console.log('✓ 移动端像素比已优化为 1')
+            }
 
             isInitialized.value = true
             console.log('✓ 地图初始化完成')
@@ -159,8 +180,8 @@ export function useMap(targetId, options = {}) {
                 const stands = await fetchNearbyStands(lonLat[0], lonLat[1], radius)
                 
                 // 计算统计数据
-                const totalVolume = stands.reduce((sum, s) => sum + (s.volumePerHa || 0) * (s.area || 0), 0)
-                const totalArea = stands.reduce((sum, s) => sum + (s.area || 0), 0)
+                const totalVolume = stands.reduce((sum, s) => sum + (s.volumePerHa || 0) * (s.areaHa || 0), 0)
+                const totalArea = stands.reduce((sum, s) => sum + (s.areaHa || 0), 0)
                 
                 // 显示查询圆圈
                 showRadiusCircle(lonLat[0], lonLat[1], radius)
@@ -179,7 +200,7 @@ export function useMap(targetId, options = {}) {
                 // 调用回调通知 MapContainer
                 options.onRadiusQueryResult?.(stands, lonLat[0], lonLat[1], radius)
                 
-                return // 半径查询模式下不执行其他逻辑
+                return
                 
             } catch (err) {
                 console.error('半径查询失败:', err)
@@ -229,38 +250,55 @@ export function useMap(targetId, options = {}) {
     // 显示林场详细信息弹窗
     const showStandDetailPopup = (feature, coordinate) => {
         const props = feature.getProperties()
-        console.log('showStandDetailPopup props:', props)
+        console.log('原始属性:', JSON.stringify(props, null, 2))
 
-        const standId = props.stand_id || props.standId || props.id
+        //优先获取 standId（数据库主键，数字类型）
+        const standId = props.standId || props.stand_id || props.id
+        
         // 小班编码仅用于显示
-        const xiaoBanCode = props.xiao_ban_code || props.xiaoBanCode || '-'
+        const xiaoBanCode = props.xiaoBanCode || props.xiao_ban_code || '-'
         
-        const area = parseFloat(props.area) || parseFloat(props.area_ha) || parseFloat(props.areaHa) || 0
-        const volumePerHa = parseFloat(props.volume_per_ha) || parseFloat(props.volumePerHa) || parseFloat(props.volume) || 0
-        const totalVolume = volumePerHa * area
+        console.log('standId:', standId, 'xiaoBanCode:', xiaoBanCode)
+
+        //使用驼峰命名获取数据（与后端JSON一致）
+        const area = parseFloat(props.areaHa) || parseFloat(props.area_ha) || 
+                     parseFloat(props.area) || 0
         
+        const volumePerHa = parseFloat(props.volumePerHa) || 
+                           parseFloat(props.volume_per_ha) || 0
+        
+        // 优先使用后端计算的 totalVolume
+        let totalVolume = parseFloat(props.totalVolume) || 
+                         parseFloat(props.total_volume) || 0
+        
+        // 如果没有 totalVolume，手动计算
+        if (totalVolume === 0 && area > 0 && volumePerHa > 0) {
+            totalVolume = area * volumePerHa
+        }
+
+        console.log('面积:', area, '每公顷蓄积:', volumePerHa, '总蓄积:', totalVolume)
+
         const data = {
             type: 'stand_detail',
-            id: standId,
-            xiaoBanCode: xiaoBanCode,
-            name: props.stand_name || props.standName || props.name || '未命名林分',
-            // 显示用小班编码，但下载用 standId
-            standNo: xiaoBanCode,
-            species: props.dominant_species || props.dominantSpecies || props.species || '未知',
+            id: standId,                    // 数据库主键（数字）
+            xiaoBanCode: xiaoBanCode,       // 小班编码（如 01-01）
+            name: props.standName || props.stand_name || props.name || '未命名林分',
+            // 下载必须使用 standId（数字）
+            downloadId: standId,            
+            displayNo: xiaoBanCode,         // 显示用小班编码
+            species: props.dominantSpecies || props.dominant_species || props.species || '未知',
             origin: props.origin || props.forest_origin || '未知',
             area: Math.round(area * 100) / 100,
             volumePerHa: Math.round(volumePerHa * 100) / 100,
             totalVolume: Math.round(totalVolume * 100) / 100,
-            age: props.stand_age || props.standAge || props.age || '-',
-            density: props.canopy_density || props.canopyDensity || props.density || '-',
+            age: props.standAge || props.stand_age || props.age || '-',
+            density: props.canopyDensity || props.canopy_density || props.density || '-',
             aspect: props.aspect || '未知',
             slope: props.slope || '-',
-            altitude: props.altitude || props.elevation || '-'
+            altitude: props.elevation || props.altitude || '-'
         }
         
         console.log('Popup data prepared:', data)
-        
-        // 显示弹窗
         showPopup(data, coordinate)
         
         // 高亮该林场
@@ -312,7 +350,7 @@ export function useMap(targetId, options = {}) {
         const markers = markerLayer?.getSource().getFeatures() || []
         
         const marker = markers.find(f => {
-            const fid = f.get('id') || f.get('zone_id') || f.get('stand_id') || f.get('xiao_ban_code')
+            const fid = f.get('standId') || f.get('stand_id') || f.get('id') || f.get('zone_id')
             return String(fid) === String(standId)
         })
         
@@ -500,26 +538,32 @@ export function useMap(targetId, options = {}) {
         return null
     }
 
-    // WFS 查询结果显示
+    // WFS 查询结果显示 - 修复版本（适配驼峰命名）
     const showWMSPopup = (feature, coordinate) => {
         const props = feature.properties || {}
         
-        const area = parseFloat(props.area_ha) || 0
-        const volumePerHa = parseFloat(props.volume_per_ha) || 0
-        const totalVolume = volumePerHa * area
+        // 修复：适配可能的下划线命名（来自WFS）
+        const area = parseFloat(props.area_ha) || parseFloat(props.areaHa) || 0
+        const volumePerHa = parseFloat(props.volume_per_ha) || parseFloat(props.volumePerHa) || 0
+        const totalVolume = parseFloat(props.total_volume) || parseFloat(props.totalVolume) || (area * volumePerHa) || 0
+        
+        // 尝试获取standId，WFS可能返回不同字段
+        const standId = props.stand_id || props.standId || props.zone_id || props.id
         
         const data = {
             type: 'stand_detail',
-            id: props.zone_id || props.xiao_ban_code,
-            name: props.stand_name || '未命名林分',
-            standNo: props.xiao_ban_code || '-',
-            species: props.dominant_species || '未知',
+            id: standId,
+            xiaoBanCode: props.xiao_ban_code || props.xiaoBanCode || '-',
+            name: props.stand_name || props.standName || '未命名林分',
+            downloadId: standId,
+            displayNo: props.xiao_ban_code || props.xiaoBanCode || '-',
+            species: props.dominant_species || props.dominantSpecies || '未知',
             origin: props.origin || '未知',
             area: Math.round(area * 100) / 100,
             volumePerHa: Math.round(volumePerHa * 100) / 100,
             totalVolume: Math.round(totalVolume * 100) / 100,
-            age: props.stand_age || '-',
-            density: props.canopy_density || '-'
+            age: props.stand_age || props.standAge || '-',
+            density: props.canopy_density || props.canopyDensity || '-'
         }
         
         showPopup(data, coordinate)

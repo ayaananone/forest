@@ -131,13 +131,6 @@ public class ForestStandController {
         boolean exists = standService.checkStandCodeExists(xiaoBanCode, excludeId);
         return ResponseEntity.ok(ResultDTO.ok(exists, exists ? "编号已存在" : "编号可用"));
     }
-
-    @GetMapping("/code/{xiaoBanCode}")
-    public ResponseEntity<ResultDTO<StandDTO>> getStandByCode(@PathVariable String xiaoBanCode) {
-        StandDTO stand = standService.getStandByCode(xiaoBanCode);
-        return ResponseEntity.ok(ResultDTO.ok(stand));
-    }
-
     // ==================== 缓存管理接口 ====================
 
     @DeleteMapping("/cache/{id}")

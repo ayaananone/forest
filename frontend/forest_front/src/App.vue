@@ -543,4 +543,107 @@ html, body, #app { height: 100%; width: 100%; overflow: hidden; }
 .footer-right {
   color: #81C784;
 }
+
+@media (max-width: 768px) {
+  .app-header {
+    padding: 0 12px;
+    height: 56px;
+  }
+  
+  .header-left {
+    gap: 8px;
+  }
+  
+  .logo-icon {
+    font-size: 28px;
+  }
+  
+  .app-title {
+    font-size: 15px;
+    letter-spacing: 0;
+    max-width: 140px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  /* 系统状态简化 */
+  .system-status .status-text {
+    display: none;
+  }
+  
+  .system-status {
+    padding: 6px;
+    background: rgba(255,255,255,0.1);
+    border: none;
+  }
+  
+  .status-icon {
+    margin: 0;
+  }
+  
+  /* 右侧简化 */
+  .header-right {
+    gap: 8px;
+  }
+  
+  .header-right .el-button--text {
+    padding: 6px;
+  }
+  
+  .header-right .el-button--text span {
+    display: none;
+  }
+  
+  /* 用户菜单 */
+  .user-menu-trigger {
+    padding: 4px 8px;
+    gap: 6px;
+    background: rgba(255,255,255,0.1);
+  }
+  
+  .user-info {
+    max-width: 70px;
+  }
+  
+  .username {
+    font-size: 13px;
+    max-width: 70px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  
+  .user-role {
+    display: none;
+  }
+  
+  .dropdown-icon {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .app-title {
+    font-size: 14px;
+    max-width: 100px;
+  }
+  
+  /* 超小屏幕只显示头像 */
+  .user-info {
+    display: none;
+  }
+  
+  .user-menu-trigger {
+    padding: 4px;
+    background: transparent;
+    border: none;
+  }
+  
+  .user-avatar {
+    width: 32px;
+    height: 32px;
+  }
+}
+
 </style>
