@@ -12,23 +12,26 @@ const BASE_URL = CONFIG.API_BASE
 
 /**
  * 将后端林分数据转换为前端标准格式
+ * 明确字段映射关系：
+ * - standId: 数据库主键，用于所有API调用
+ * - standNo: 业务编号（小班号），仅用于展示
  */
 function transformStand(backendData) {
     if (!backendData) return null
     
     return {
-        id: backendData.standId,
-        standNo: backendData.xiaoBanCode,
+        standId: backendData.standId,              // 数据库主键，用于API调用
+        standNo: backendData.xiaoBanCode,          // 小班号，仅展示
         standName: backendData.standName,
         area: backendData.areaHa,                    
         dominantSpecies: backendData.dominantSpecies,
-        volumePerHa: backendData.volumePerHa,        // m³/ha
-        totalVolume: backendData.totalVolume,        // m³ (后端已计算)
+        volumePerHa: backendData.volumePerHa,      // m³/ha
+        totalVolume: backendData.totalVolume,      // m³ (后端已计算)
         centerLon: backendData.centerLon,
         centerLat: backendData.centerLat,
         age: backendData.standAge,
-        density: backendData.canopyDensity,          // 郁闭度
-        origin: backendData.origin                   // 起源
+        density: backendData.canopyDensity,        // 郁闭度
+        origin: backendData.origin                 // 起源
     }
 }
 
@@ -72,7 +75,6 @@ function transformSpeciesStats(backendDataArray) {
  */
 export async function fetchStands() {
     try {
-        // 使用request，自动携带JWT Token
         const data = await request.get('/stands')
         console.log('fetchStands 原始数据:', data.length, '条')
         const transformed = transformStands(data)
@@ -203,17 +205,7 @@ export async function exportStands(format = 'csv', filters = {}) {
             responseType: 'blob'
         })
         
-        // 创建下载链接
-        const blob = new Blob([response])
-        const url = window.URL.createObjectURL(blob)
-        const link = document.createElement('a')
-        link.href = url
-        link.download = `林分数据_${new Date().toISOString().slice(0,10)}.${format}`
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-        window.URL.revokeObjectURL(url)
-        
+        downloadBlob(response, `林分数据_${new Date().toISOString().slice(0,10)}.${format}`)
         return true
     } catch (error) {
         console.error('导出林分数据失败:', error)
@@ -222,18 +214,55 @@ export async function exportStands(format = 'csv', filters = {}) {
 }
 
 /**
- * 获取林分历史数据
+ * 导出指定林分的单木数据 - 使用standId
+ * @param {string|number} standId - 林分ID（数据库主键）
+ * @param {string} format - 导出格式：csv、excel、json
  */
-export async function fetchStandHistory(standId, years = 5) {
-    try {
-        const data = await request.get(`/stands/${standId}/history`, {
-            params: { years }
-        })
-        return data
-    } catch (error) {
-        console.error('获取林分历史数据失败:', error)
-        throw error
+export async function exportStandTrees(standId, format = 'csv') {
+    if (!standId) {
+        throw new Error('林分ID不能为空')
     }
+    
+    const standIdStr = String(standId).trim()
+    
+    const response = await request.get('/trees/stand/export', {
+        params: {
+            standId: standIdStr,  // 明确使用standId参数
+            format: format
+        },
+        responseType: 'blob'
+    })
+    
+    // 从响应头获取文件名
+    const contentDisposition = response.headers?.['content-disposition']
+    let filename = `林分_${standIdStr}_单木数据.${format === 'excel' ? 'xlsx' : format}`
+    
+    if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename\*?=(?:UTF-8'')?([^;]+)/i)
+        if (filenameMatch) {
+            filename = decodeURIComponent(filenameMatch[1].replace(/['"]/g, ''))
+        }
+    }
+    
+    downloadBlob(response.data || response, filename)
+    return true
+}
+
+// ==================== 辅助工具函数 ====================
+
+/**
+ * 下载Blob文件
+ */
+function downloadBlob(blobData, filename) {
+    const blob = blobData instanceof Blob ? blobData : new Blob([blobData])
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
 }
 
 // ==================== GeoServer WFS/WMS 方法（无需JWT，直接访问）====================
@@ -262,7 +291,6 @@ export async function fetchStandGeometry(standId) {
  */
 export async function fetchWMSFeatureInfo(lon, lat, width = 101, height = 101) {
     try {
-        // 构建WMS GetFeatureInfo请求
         const params = new URLSearchParams({
             SERVICE: 'WMS',
             VERSION: '1.1.1',
@@ -289,8 +317,6 @@ export async function fetchWMSFeatureInfo(lon, lat, width = 101, height = 101) {
         throw error
     }
 }
-
-// ==================== 辅助工具函数 ====================
 
 /**
  * 计算两点间距离（米）

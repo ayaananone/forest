@@ -2,6 +2,8 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
+import StandDetailView from '@/views/StandDetailView.vue'
+import DashboardLayout from '@/views/DashboardLayout.vue'
 
 const routes = [
   {
@@ -33,7 +35,20 @@ const routes = [
     name: 'Admin',
     component: () => import('@/views/AdminView.vue'),
     meta: { requiresAuth: true, requiresAdmin: true }
-  }
+  },
+  {
+    path: '/',
+    name: 'Dashboard',
+    component: DashboardLayout,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/stand/:id',
+    name: 'StandDetail',
+    component: StandDetailView,
+    meta: { requiresAuth: true, title: '林分详情' }
+  },
+
 ]
 
 const router = createRouter({

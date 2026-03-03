@@ -73,7 +73,6 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { ElNotification } from 'element-plus'
 import { ArrowLeft, ArrowRight, DataLine } from '@element-plus/icons-vue'
-import Layout from './Layout.vue'
 import ChartContainer from '@/components/charts/ChartContainer.vue'
 import MobileStatsPanel from '@/components/charts/MobileStatsPanel.vue'
 import MapContainer from '@/components/map/MapContainer.vue'

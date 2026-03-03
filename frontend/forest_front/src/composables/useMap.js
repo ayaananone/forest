@@ -261,8 +261,7 @@ export function useMap(targetId, options = {}) {
         console.log('standId:', standId, 'xiaoBanCode:', xiaoBanCode)
 
         //使用驼峰命名获取数据（与后端JSON一致）
-        const area = parseFloat(props.areaHa) || parseFloat(props.area_ha) || 
-                     parseFloat(props.area) || 0
+        const area = parseFloat(props.areaHa) || 0
         
         const volumePerHa = parseFloat(props.volumePerHa) || 
                            parseFloat(props.volume_per_ha) || 0
@@ -288,9 +287,9 @@ export function useMap(targetId, options = {}) {
             displayNo: xiaoBanCode,         // 显示用小班编码
             species: props.dominantSpecies || props.dominant_species || props.species || '未知',
             origin: props.origin || props.forest_origin || '未知',
-            area: Math.round(area * 100) / 100,
+            area: props.areaHa || Math.round(area * 100) / 100,
             volumePerHa: Math.round(volumePerHa * 100) / 100,
-            totalVolume: Math.round(totalVolume * 100) / 100,
+            totalVolume: props.totalVolume || Math.round(totalVolume * 100) / 100,
             age: props.standAge || props.stand_age || props.age || '-',
             density: props.canopyDensity || props.canopy_density || props.density || '-',
             aspect: props.aspect || '未知',
@@ -538,11 +537,11 @@ export function useMap(targetId, options = {}) {
         return null
     }
 
-    // WFS 查询结果显示 - 修复版本（适配驼峰命名）
+    // WFS 查询结果显示
     const showWMSPopup = (feature, coordinate) => {
         const props = feature.properties || {}
         
-        // 修复：适配可能的下划线命名（来自WFS）
+        //适配可能的下划线命名（来自WFS）
         const area = parseFloat(props.area_ha) || parseFloat(props.areaHa) || 0
         const volumePerHa = parseFloat(props.volume_per_ha) || parseFloat(props.volumePerHa) || 0
         const totalVolume = parseFloat(props.total_volume) || parseFloat(props.totalVolume) || (area * volumePerHa) || 0
@@ -559,7 +558,7 @@ export function useMap(targetId, options = {}) {
             displayNo: props.xiao_ban_code || props.xiaoBanCode || '-',
             species: props.dominant_species || props.dominantSpecies || '未知',
             origin: props.origin || '未知',
-            area: Math.round(area * 100) / 100,
+            area: props.areaHa ||Math.round(area * 100) / 100,
             volumePerHa: Math.round(volumePerHa * 100) / 100,
             totalVolume: Math.round(totalVolume * 100) / 100,
             age: props.stand_age || props.standAge || '-',
