@@ -30,7 +30,7 @@ public class ForestStandController {
     private final ForestStandService standService;
     private final ForestStandMapper forestStandMapper;
 
-    // ==================== 原有查询接口 ====================
+    // ==================== 查询接口 ====================
 
     @GetMapping
     public ResponseEntity<List<StandDTO>> getAllStands() {
@@ -57,15 +57,13 @@ public class ForestStandController {
     }
 
     @GetMapping("/statistics/species")
-    public ResponseEntity<List<StatisticsDTO>> getSpeciesStatistics() {
-        return ResponseEntity.ok(standCacheService.getSpeciesStatistics());
+    public List<StatisticsDTO> getSpeciesStatistics() {
+        // 从缓存获取或从数据库查询
+        return forestStandMapper.getStatisticsBySpecies();
     }
 
-    // ==================== 新增CRUD接口 ====================
+    // ==================== CRUD接口 ====================
 
-    /**
-     * 创建新林分
-     */
     @PostMapping
     public ResponseEntity<ResultDTO<StandDTO>> createStand(
             @RequestBody @Valid StandDTO standDTO,
@@ -78,20 +76,15 @@ public class ForestStandController {
             standCacheService.refreshStand(created.getStandId());
             return ResponseEntity.ok(ResultDTO.ok(created, "林分创建成功"));
         } catch (org.springframework.dao.DuplicateKeyException e) {
-            // 主键冲突时自动修复序列并重试
             log.warn("检测到主键冲突，尝试自动修复序列...");
             fixSequenceInternal();
 
-            // 重试创建
             StandDTO created = standService.createStand(standDTO, operator);
             standCacheService.refreshStand(created.getStandId());
             return ResponseEntity.ok(ResultDTO.ok(created, "林分创建成功（已自动修复序列）"));
         }
     }
 
-    /**
-     * 更新林分信息
-     */
     @PutMapping("/{id}")
     public ResponseEntity<ResultDTO<StandDTO>> updateStand(
             @PathVariable Integer id,
@@ -106,9 +99,6 @@ public class ForestStandController {
         return ResponseEntity.ok(ResultDTO.ok(updated, "林分更新成功"));
     }
 
-    /**
-     * 删除林分
-     */
     @DeleteMapping("/{id}")
     public ResponseEntity<ResultDTO<Void>> deleteStand(
             @PathVariable Integer id,
@@ -121,9 +111,6 @@ public class ForestStandController {
         return ResponseEntity.ok(ResultDTO.ok(null, "林分删除成功"));
     }
 
-    /**
-     * 批量更新林分
-     */
     @PutMapping("/batch")
     public ResponseEntity<ResultDTO<List<StandDTO>>> batchUpdateStands(
             @RequestBody @Valid List<StandDTO> standDTOList,
@@ -136,9 +123,6 @@ public class ForestStandController {
         return ResponseEntity.ok(ResultDTO.ok(updated, "批量更新成功"));
     }
 
-    /**
-     * 批量删除林分
-     */
     @DeleteMapping("/batch")
     public ResponseEntity<ResultDTO<Void>> batchDeleteStands(
             @RequestBody List<Integer> ids,
@@ -151,16 +135,10 @@ public class ForestStandController {
         return ResponseEntity.ok(ResultDTO.ok(null, "批量删除成功"));
     }
 
-    /**
-     * 检查林分编号是否存在
-     */
-    @GetMapping("/check-code")
-    public ResponseEntity<ResultDTO<Boolean>> checkStandCodeExists(
-            @RequestParam String xiaoBanCode,
-            @RequestParam(required = false) Integer excludeId) {
-
-        boolean exists = standService.checkStandCodeExists(xiaoBanCode, excludeId);
-        return ResponseEntity.ok(ResultDTO.ok(exists, exists ? "编号已存在" : "编号可用"));
+    @GetMapping("/check-id/{id}")
+    public ResponseEntity<ResultDTO<Boolean>> checkStandIdExists(@PathVariable Integer id) {
+        boolean exists = standService.getStandById(id) != null;
+        return ResponseEntity.ok(ResultDTO.ok(exists, exists ? "林分存在" : "林分不存在"));
     }
 
     // ==================== 缓存管理接口 ====================
@@ -192,12 +170,8 @@ public class ForestStandController {
         return ResponseEntity.ok(status);
     }
 
-    // ==================== 序列修复接口（解决主键冲突问题） ====================
+    // ==================== 序列修复接口 ====================
 
-    /**
-     * 修复主键序列问题
-     * 当出现"重复键违反唯一约束"错误时，调用此接口修复
-     */
     @PostMapping("/fix-sequence")
     public ResponseEntity<Map<String, Object>> fixSequence() {
         Map<String, Object> result = new HashMap<>();
@@ -214,26 +188,18 @@ public class ForestStandController {
         }
     }
 
-    /**
-     * 内部修复序列方法
-     */
     private void fixSequenceInternal() {
-        // 获取当前表中最大ID
         Integer maxId = forestStandMapper.selectMaxStandId();
         if (maxId == null) {
             maxId = 0;
         }
 
-        // 重置序列到最大ID + 1
         Integer nextVal = maxId + 1;
         forestStandMapper.resetSequence(nextVal);
 
         log.info("序列已修复：最大ID={}, 序列下一个值={}", maxId, nextVal);
     }
 
-    /**
-     * 查询序列状态
-     */
     @GetMapping("/sequence-status")
     public ResponseEntity<Map<String, Object>> getSequenceStatus() {
         Map<String, Object> result = new HashMap<>();

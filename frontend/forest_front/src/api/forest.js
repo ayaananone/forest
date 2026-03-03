@@ -16,31 +16,37 @@ const BASE_URL = CONFIG.API_BASE
 function transformStand(backendData) {
     if (!backendData) return null
     
+    // 确保数值字段正确转换为数字类型
+    const safeNumber = (val) => {
+        if (val === null || val === undefined || val === '') return 0
+        const num = Number(val)
+        return isNaN(num) ? 0 : num
+    }
+    
     return {
         standId: backendData.standId,
         standNo: backendData.xiaoBanCode,
-        standName: backendData.standName,
+        standName: backendData.standName || '',
         xiaoBanCode: backendData.xiaoBanCode,
-        areaHa: backendData.areaHa,
-        dominantSpecies: backendData.dominantSpecies,
-        // speciesComposition 保持原样，不转换
+        areaHa: safeNumber(backendData.areaHa),
+        dominantSpecies: backendData.dominantSpecies || '',
         speciesComposition: backendData.speciesComposition,
-        volumePerHa: backendData.volumePerHa,
-        totalVolume: backendData.totalVolume,
-        centerLon: backendData.centerLon,
-        centerLat: backendData.centerLat,
-        standAge: backendData.standAge,
-        canopyDensity: backendData.canopyDensity,
+        volumePerHa: safeNumber(backendData.volumePerHa),
+        totalVolume: safeNumber(backendData.totalVolume),
+        centerLon: safeNumber(backendData.centerLon),
+        centerLat: safeNumber(backendData.centerLat),
+        standAge: safeNumber(backendData.standAge),
+        canopyDensity: safeNumber(backendData.canopyDensity),
         siteClass: backendData.siteClass,
-        avgDbh: backendData.avgDbh,
-        avgHeight: backendData.avgHeight,
-        elevation: backendData.elevation,
-        slope: backendData.slope,
+        avgDbh: safeNumber(backendData.avgDbh),
+        avgHeight: safeNumber(backendData.avgHeight),
+        elevation: safeNumber(backendData.elevation),
+        slope: safeNumber(backendData.slope),
         aspect: backendData.aspect,
         siteType: backendData.siteType,
         surveyDate: backendData.surveyDate,
         surveyor: backendData.surveyor,
-        origin: backendData.origin,
+        origin: backendData.origin || '',
         remark: backendData.remark,
         createTime: backendData.createTime,
         updateTime: backendData.updateTime,
@@ -64,22 +70,41 @@ function transformStands(backendDataArray) {
  * 转换树种统计数据
  */
 function transformSpeciesStats(backendDataArray) {
-    if (!Array.isArray(backendDataArray)) return []
+    if (!Array.isArray(backendDataArray)) {
+        console.warn('transformSpeciesStats: 输入不是数组', backendDataArray)
+        return []
+    }
     
     const { SPECIES_COLORS } = CONFIG
     
-    return backendDataArray.map((item, index) => {
+    const result = backendDataArray.map((item, index) => {
         const colors = Object.values(SPECIES_COLORS || {})
         const color = SPECIES_COLORS?.[item.species] || colors[index % colors.length] || '#757575'
         
+        // 确保数值字段正确转换
+        const safeNumber = (val) => {
+            if (val === null || val === undefined || val === '') return 0
+            const num = Number(val)
+            return isNaN(num) ? 0 : num
+        }
+        
+        // 正确处理 count 和 standCount
+        const count = safeNumber(item.standCount || item.count)
+        
         return {
             species: item.species || '未知',
-            count: item.standCount || item.count || 0,  
-            totalArea: item.totalArea || 0,
-            totalVolume: item.totalVolume || 0,
+            count: count,
+            standCount: count,
+            totalArea: safeNumber(item.totalArea),
+            totalVolume: safeNumber(item.totalVolume),
+            avgVolumePerHa: safeNumber(item.avgVolumePerHa),
             color: color
         }
-    })
+    }).filter(item => item.count > 0)
+    
+    console.log('transformSpeciesStats 结果:', result.map(r => `${r.species}: ${r.count}`))
+    
+    return result
 }
 
 // ==================== API 方法 ====================
@@ -90,9 +115,14 @@ function transformSpeciesStats(backendDataArray) {
 export async function fetchStands() {
     try {
         const data = await request.get('/stands')
-        console.log('fetchStands 原始数据:', data.length, '条')
+        console.log('fetchStands 原始数据:', data?.length, '条')
         const transformed = transformStands(data)
-        console.log('fetchStands 转换后:', transformed.length, '条')
+        console.log('fetchStands 转换后:', transformed?.length, '条')
+        
+        // 检查是否有蓄积量数据
+        const withVolume = transformed.filter(s => s.volumePerHa > 0).length
+        console.log(`其中有蓄积量数据的林分: ${withVolume}/${transformed.length}`)
+        
         return transformed
     } catch (error) {
         console.error('获取林分数据失败:', error)
@@ -107,7 +137,9 @@ export async function fetchSpeciesStatistics() {
     try {
         const data = await request.get('/stands/statistics/species')
         console.log('fetchSpeciesStatistics 原始数据:', data)
-        return transformSpeciesStats(data)
+        const transformed = transformSpeciesStats(data)
+        console.log('fetchSpeciesStatistics 转换后:', transformed)
+        return transformed
     } catch (error) {
         console.error('获取树种统计失败:', error)
         throw error
@@ -126,7 +158,7 @@ export async function fetchNearbyStands(lon, lat, radiusMeters) {
                 radiusMeters: radiusMeters
             }
         })
-        console.log('fetchNearbyStands 原始数据:', data.length, '条')
+        console.log('fetchNearbyStands 原始数据:', data?.length, '条')
         return transformStands(data)
     } catch (error) {
         console.error('半径查询失败:', error)
@@ -152,7 +184,6 @@ export async function fetchStandDetail(standId) {
  */
 export async function createStand(standData) {
     try {
-        // 直接提交所有字段，不处理 speciesComposition
         const submitData = {
             xiaoBanCode: standData.xiaoBanCode,
             standName: standData.standName,
@@ -169,7 +200,6 @@ export async function createStand(standData) {
             slope: standData.slope,
             aspect: standData.aspect,
             siteType: standData.siteType,
-            // 直接传递，不转换
             speciesComposition: standData.speciesComposition,
             surveyDate: standData.surveyDate,
             surveyor: standData.surveyor,
@@ -213,7 +243,6 @@ export async function updateStand(standId, standData) {
             slope: standData.slope,
             aspect: standData.aspect,
             siteType: standData.siteType,
-            // 直接传递，不转换
             speciesComposition: standData.speciesComposition,
             surveyDate: standData.surveyDate,
             surveyor: standData.surveyor,

@@ -5,7 +5,7 @@ import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 
 @Data
-@NoArgsConstructor
+@NoArgsConstructor  // MyBatis 需要无参构造函数
 @AllArgsConstructor
 public class StatisticsDTO {
     private String species;

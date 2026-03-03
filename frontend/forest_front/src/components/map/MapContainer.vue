@@ -622,6 +622,9 @@ const handleRadiusSelectStand = (stand) => {
   
   const coordinate = fromLonLat([stand.centerLon, stand.centerLat])
   
+  // 修复：使用 areaHa 计算总蓄积
+  const totalVolume = ((stand.volumePerHa || 0) * (stand.areaHa || stand.area || 0)).toFixed(2)
+  
   const data = {
     type: 'stand_detail',
     standId: stand.standId || stand.id,
@@ -629,9 +632,9 @@ const handleRadiusSelectStand = (stand) => {
     standNo: stand.standNo || stand.xiaoBanCode || '-',
     species: stand.dominantSpecies || '未知',
     origin: stand.origin || '未知',
-    area: stand.areaHa || 0,
+    area: stand.areaHa || stand.area || 0,
     volumePerHa: stand.volumePerHa || 0,
-    totalVolume: ((stand.volumePerHa || 0) * (stand.areaHa || 0)).toFixed(2),
+    totalVolume: totalVolume,
     age: stand.standAge || '-',
     density: stand.canopyDensity || '-',
     _raw: stand
@@ -660,7 +663,11 @@ function handleRadiusQueryResult(stands, lon, lat, radius) {
   console.log('半径查询结果:', stands.length, '个林分')
   emit('radius-query-result', stands, lon, lat, radius)
   
-  const totalVolume = stands.reduce((sum, s) => sum + (s.volumePerHa || 0) * (s.area || 0), 0)
+  // 修复：使用 areaHa 而不是 area
+  const totalVolume = stands.reduce((sum, s) => {
+    const volume = (s.volumePerHa || 0) * (s.areaHa || s.area || 0)
+    return sum + volume
+  }, 0)
   
   const formatVolume = (v) => {
     if (!v || v === 0) return '0 m³'
