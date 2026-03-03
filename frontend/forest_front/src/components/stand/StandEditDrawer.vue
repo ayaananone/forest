@@ -2,7 +2,7 @@
   <el-drawer
     v-model="visible"
     :title="isEdit ? '✏️ 编辑林分' : '➕ 新增林分'"
-    size="500px"
+    size="580px"
     :close-on-click-modal="false"
     class="stand-edit-drawer"
     @closed="handleClosed"
@@ -337,7 +337,7 @@ watch(() => props.editData, (newVal) => {
       ...defaultForm,
       ...newVal,
       // 确保数值类型正确
-      area: newVal.area ? Number(newVal.area) : undefined,
+      area: areaValue ? Number(areaValue) : undefined,
       volumePerHa: newVal.volumePerHa ? Number(newVal.volumePerHa) : undefined,
       standAge: newVal.standAge ? Number(newVal.standAge) : undefined,
       canopyDensity: newVal.canopyDensity ? Number(newVal.canopyDensity) : 0.7,
@@ -382,6 +382,8 @@ const handleSubmit = async () => {
     
     const submitData = {
       ...formData.value,
+      areaHa: formData.value.area,
+      area: formData.value.area,
       totalVolume: totalVolume.value
     }
     

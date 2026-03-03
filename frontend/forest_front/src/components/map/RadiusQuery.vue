@@ -138,7 +138,7 @@
             >
               <div class="stand-info">
                 <span class="stand-name">{{ stand.standName || stand.xiaoBanCode || '未命名' ||stand.id }}</span>
-                <span class="stand-species">{{ stand.dominantSpecies || '未知' }}</span>
+                <span class="stand-species">{{ stand.species || '未知' }}</span>
               </div>
               <div class="stand-data">
                 <span class="stand-distance">{{ stand.distance }}m</span>

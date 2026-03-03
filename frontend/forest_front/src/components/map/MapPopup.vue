@@ -9,7 +9,7 @@
       <div class="popup-header">
         <h4>
           <el-icon color="#2E7D32"><View /></el-icon>
-          {{ content?.name || '林分信息' }}
+          {{ content?.standName || '林分信息' }}
         </h4>
         <el-button type="danger" link size="small" @click="handleClose">
           <el-icon><Close /></el-icon>
@@ -18,8 +18,13 @@
       
       <div class="popup-body">
         <el-descriptions :column="1" size="small" border>
-          <el-descriptions-item label="林分编号">
-            {{ content?.standNo || content?.id || '-' }}
+          <!-- 使用 standId 作为主键显示 -->
+          <el-descriptions-item label="林分ID">
+            <span class="highlight-value">{{ content?.standId || '-' }}</span>
+          </el-descriptions-item>
+          
+          <el-descriptions-item label="小班号">
+            {{ content?.standNo || '-' }}
           </el-descriptions-item>
           
           <el-descriptions-item label="优势树种">
@@ -28,7 +33,7 @@
               effect="dark"
               size="small"
             >
-              {{ content?.species || '未知' }}
+              {{ content?.species || '未知林分' }}
             </el-tag>
           </el-descriptions-item>
           
@@ -37,7 +42,7 @@
           </el-descriptions-item>
           
           <el-descriptions-item label="林场总面积">
-            <span class="highlight-value area-value">{{ content?.area || 0 }} 公顷</span>
+            <span class="highlight-value area-value">{{ content?.area || 666 }} 公顷</span>
           </el-descriptions-item>
           
           <el-descriptions-item label="每公顷蓄积量">
@@ -58,7 +63,7 @@
         </el-descriptions>
       </div>
       
-      <!-- 下载按钮组 - 支持 CSV、Excel、JSON 三种格式 -->
+      <!-- 下载按钮组 - 使用统一的导出API -->
       <div class="popup-footer">
         <el-button type="primary" size="small" plain @click="handleEdit">
           <el-icon><Edit /></el-icon> 编辑
@@ -68,7 +73,7 @@
           type="success" 
           size="small" 
           @click="handleDownload('csv')"
-          :disabled="!content?.id && !content?.standNo"
+          :disabled="!content?.standId"
         >
           <el-icon><Download /></el-icon> 下载单木数据
           <template #dropdown>
@@ -132,10 +137,13 @@ import {
   Download,
   Document,
   Grid,
-  DataLine
+  DataLine,
+  Edit
 } from '@element-plus/icons-vue'
 import { SPECIES_COLORS } from '@/config'
 import { ElMessage } from 'element-plus'
+// 导入统一的导出API
+import { exportStandTrees } from '@/api/forest'
 
 const props = defineProps({
   content: {
@@ -148,73 +156,32 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['close', 'zoom-to'])
+const emit = defineEmits(['close', 'zoom-to', 'edit'])
 
 const handleClose = () => {
   emit('close')
 }
 
+const handleEdit = () => {
+  emit('edit', props.content)
+}
+
 /**
- * 处理下载按钮点击 - 支持 CSV、Excel、JSON 三种格式
+ * 处理下载按钮点击 - 使用统一的API
  * @param {string} format - 导出格式：csv、excel、json
  */
 const handleDownload = async (format = 'csv') => {
-  // 获取林分ID，优先id
-  const standId = props.content?.id
+  const standId = props.content?.standId
   
   if (!standId) {
-    ElMessage.warning('无效的小班ID')
+    ElMessage.warning('无效的林分ID')
     return
   }
   
-  // 确保转换为字符串并使用encodeURIComponent编码
-  const standIdStr = String(standId).trim()
-  
   try {
     ElMessage.info(`正在下载单木数据(${format.toUpperCase()}格式)...`)
-    
-    // 使用新的端点 /api/trees/stand/export
-    const response = await fetch(
-      `/api/trees/stand/export?standId=${encodeURIComponent(standIdStr)}&format=${format}`, 
-      {
-        method: 'GET',
-        headers: {
-          'Accept': '*/*'
-        }
-      }
-    )
-    
-    if (!response.ok) {
-      if (response.status === 404) {
-        throw new Error('该小班暂无单木数据')
-      }
-      const errorText = await response.text()
-      throw new Error(`下载失败: ${errorText || response.statusText}`)
-    }
-    
-    // 获取文件名
-    const contentDisposition = response.headers.get('content-disposition')
-    let filename = `小班_${standIdStr}_单木数据.${format === 'excel' ? 'xlsx' : format}`
-    if (contentDisposition) {
-      const filenameMatch = contentDisposition.match(/filename\*?=(?:UTF-8'')?([^;]+)/i)
-      if (filenameMatch) {
-        filename = decodeURIComponent(filenameMatch[1].replace(/['"]/g, ''))
-      }
-    }
-    
-    // 创建下载链接
-    const blob = await response.blob()
-    const url = window.URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = filename
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    window.URL.revokeObjectURL(url)
-    
-    ElMessage.success(`小班 ${standIdStr} 的单木数据下载成功`)
-    
+    await exportStandTrees(standId, format)
+    ElMessage.success(`林分 ${standId} 的单木数据下载成功`)
   } catch (error) {
     console.error('下载单木数据失败:', error)
     ElMessage.error(error.message || '下载失败，请重试')
@@ -236,6 +203,7 @@ const formatVolume = (volume) => {
 </script>
 
 <style scoped>
+/* 样式保持不变 */
 .map-popup {
   position: absolute;
   background: #fff;

@@ -158,7 +158,8 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { useRouter } from 'vue-router'  // 添加路由
+import { ElMessage } from 'element-plus'
 import { toLonLat, fromLonLat } from 'ol/proj'
 import { Feature } from 'ol'
 import { Point } from 'ol/geom'
@@ -191,19 +192,18 @@ const emit = defineEmits([
   'error'
 ])
 
-// 引用
+// 添加路由
+const router = useRouter()
+
+// 引用和状态定义保持不变...
 const radiusQueryRef = ref(null)
 const editDrawerRef = ref(null)
-
-// 状态
 const isInitialized = ref(false)
 const error = ref(null)
 const currentZoom = ref(props.initialZoom)
 const mousePosition = ref('')
 const radiusQueryActive = ref(false)
 const radiusQueryRadius = ref(1000)
-
-// 编辑相关状态
 const drawerVisible = ref(false)
 const currentEditStand = ref(null)
 const editMode = ref(false)
@@ -228,7 +228,7 @@ const layerList = ref([
   { name: 'heatmap', label: '蓄积热力图', visible: false, opacity: 0.8 }
 ])
 
-// 使用 useMap
+// useMap 保持不变
 const mapState = useMap(props.targetId, {
   onRadiusQueryResult: handleRadiusQueryResult,
   radiusQuery: {
@@ -254,7 +254,17 @@ const {
   popupVisible
 } = mapState
 
+// ==================== 移动端检测 ====================
+const isMobile = ref(false)
+
+const checkMobile = () => {
+  isMobile.value = window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+}
+
 onMounted(async () => {
+  checkMobile()
+  window.addEventListener('resize', checkMobile)
+  
   try {
     await initMap()
     isInitialized.value = true
@@ -268,7 +278,6 @@ onMounted(async () => {
       mousePosition.value = `${coord[0].toFixed(4)}, ${coord[1].toFixed(4)}`
     })
     
-    // 添加地图点击事件（用于编辑）
     map.value?.on('click', handleMapClick)
     
     await loadInitialData()
@@ -280,10 +289,12 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
+  window.removeEventListener('resize', checkMobile)
   exitEditMode()
   destroyMap()
 })
 
+// 其他方法保持不变...
 const loadInitialData = async () => {
   try {
     const stands = await fetchStands()
@@ -295,7 +306,60 @@ const loadInitialData = async () => {
   }
 }
 
-// ==================== 图层控制 ====================
+// ==================== 修改后的地图点击处理 ====================
+const handleMapClick = (evt) => {
+  // 如果不在编辑模式，处理林分点击
+  if (!editMode.value) {
+    const feature = map.value.forEachFeatureAtPixel(evt.pixel, (f) => f)
+    if (feature) {
+      const standData = feature.get('standData') || feature.getProperties()
+      if (standData && (standData.standId || standData.id)) {
+        // 移动端跳转到新标签页，桌面端显示弹窗
+        if (isMobile.value) {
+          openStandDetailInNewTab(standData)
+        } else {
+          showStandPopup(standData, evt.coordinate)
+        }
+      }
+    }
+  }
+}
+
+// ==================== 移动端：在新标签页打开详情 ====================
+const openStandDetailInNewTab = (stand) => {
+  const standId = stand.standId || stand.id
+  if (!standId) return
+  
+  // 构建详情页 URL
+  const detailUrl = `${window.location.origin}/stand/${standId}`
+  
+  // 在新标签页打开
+  window.open(detailUrl, '_blank')
+  
+  ElMessage.success('已在新标签页打开林分详情')
+}
+
+// ==================== 桌面端：显示弹窗 ====================
+const showStandPopup = (stand, coordinate) => {
+  const data = {
+    type: 'stand_detail',
+    standId: stand.standId || stand.id,
+    standName: stand.standName || '未命名林分',
+    standNo: stand.standNo || stand.xiaoBanCode || '-',
+    species: stand.dominantSpecies || '未知',
+    origin: stand.origin || '未知',
+    area: stand.areaHa || 0,
+    volumePerHa: stand.volumePerHa || 0,
+    totalVolume: ((stand.volumePerHa || 0) * (stand.areaHa || 0)).toFixed(2),
+    age: stand.standAge || '-',
+    density: stand.canopyDensity || '-',
+    _raw: stand
+  }
+  
+  showPopup(data, coordinate)
+}
+
+// 其他方法保持不变...
 const handleLayerToggle = (layerName, visible) => {
   toggleLayer(layerName, visible)
   
@@ -319,7 +383,6 @@ const handleOpacityChange = (layerName, opacity) => {
   if (layer) layer.opacity = opacity
 }
 
-// ==================== 筛选 ====================
 const handleClearSpecies = () => {
   filters.value.species = ''
   handleFilterChange()
@@ -360,7 +423,6 @@ const resetFilters = () => {
   ElMessage.success('筛选已重置')
 }
 
-// ==================== 编辑功能 ====================
 const openCreateDrawer = () => {
   currentEditStand.value = null
   drawerVisible.value = true
@@ -373,8 +435,10 @@ const openEditDrawer = (stand) => {
 
 const handleSaveStand = async (formData, isEdit) => {
   try {
-    if (isEdit) {
-      await updateStand(formData.id || formData.xiaoBanCode, formData)
+    const standId = formData.standId || formData.id
+    
+    if (isEdit && standId) {
+      await updateStand(standId, formData)
       ElMessage.success('林分更新成功')
     } else {
       await createStand(formData)
@@ -398,7 +462,12 @@ const handleDeleteStand = async (stand) => {
       type: 'warning'
     })
     
-    await deleteStand(stand.id || stand.xiaoBanCode)
+    const standId = stand.standId || stand.id
+    if (!standId) {
+      throw new Error('无法获取林分ID')
+    }
+    
+    await deleteStand(standId)
     ElMessage.success('林分已删除')
     
     await loadInitialData()
@@ -487,20 +556,6 @@ const handleLocationChange = ({ lon, lat }) => {
   }
 }
 
-const handleMapClick = (evt) => {
-  // 如果不在编辑模式，让 useMap 处理点击
-  if (!editMode.value) {
-    // 检查是否点击了林分
-    const feature = map.value.forEachFeatureAtPixel(evt.pixel, (f) => f)
-    if (feature) {
-      const standData = feature.get('standData') || feature.getProperties()
-      if (standData && (standData.id || standData.xiaoBanCode)) {
-        showStandPopup(standData, evt.coordinate)
-      }
-    }
-  }
-}
-
 const handleEditFromPopup = () => {
   const stand = popupContent.value?._raw
   if (stand) {
@@ -509,7 +564,6 @@ const handleEditFromPopup = () => {
   }
 }
 
-// ==================== 弹窗处理 ====================
 const closePopup = () => {
   clearHighlight()
   if (mapClosePopup) {
@@ -524,7 +578,7 @@ const handleZoomTo = (standId) => {
   if (markerLayer && view.value) {
     const markers = markerLayer.getSource().getFeatures()
     const marker = markers.find(f => {
-      const fid = f.get('id') || f.get('zone_id') || f.get('stand_id') || f.get('xiao_ban_code')
+      const fid = f.get('standId') || f.get('id') || f.get('zone_id') || f.get('stand_id')
       return String(fid) === String(standId)
     })
     
@@ -542,25 +596,6 @@ const handleZoomTo = (standId) => {
   closePopup()
 }
 
-const showStandPopup = (stand, coordinate) => {
-  const data = {
-    type: 'stand_detail',
-    id: stand.id || stand.xiaoBanCode,
-    name: stand.standName || stand.xiaoBanCode || '未命名林分',
-    standNo: stand.xiaoBanCode || '-',
-    species: stand.dominantSpecies || '未知',
-    origin: stand.origin || '未知',
-    area: stand.area || 0,
-    volumePerHa: stand.volumePerHa || 0,
-    totalVolume: (stand.volumePerHa || 0) * (stand.area || 0),
-    age: stand.standAge || '-',
-    density: stand.canopyDensity || '-',
-    _raw: stand
-  }
-  
-  showPopup(data, coordinate)
-}
-
 // ==================== 半径查询相关 ====================
 const handleShowCircleChange = (visible) => {
   const highlightLayer = mapState.getLayerByName('highlight')
@@ -571,6 +606,12 @@ const handleShowCircleChange = (visible) => {
 
 const handleRadiusSelectStand = (stand) => {
   console.log('半径查询结果中选择林分:', stand)
+  
+  // 移动端也跳转到新标签页
+  if (isMobile.value) {
+    openStandDetailInNewTab(stand)
+    return
+  }
   
   if (view.value && stand.centerLon && stand.centerLat) {
     view.value.animate({
@@ -583,21 +624,21 @@ const handleRadiusSelectStand = (stand) => {
   
   const data = {
     type: 'stand_detail',
-    id: stand.id || stand.xiaoBanCode,
-    name: stand.standName || stand.xiaoBanCode || '未命名林分',
-    standNo: stand.xiaoBanCode || '-',
+    standId: stand.standId || stand.id,
+    standName: stand.standName || '未命名林分',
+    standNo: stand.standNo || stand.xiaoBanCode || '-',
     species: stand.dominantSpecies || '未知',
     origin: stand.origin || '未知',
-    area: stand.area || 0,
+    area: stand.areaHa || 0,
     volumePerHa: stand.volumePerHa || 0,
-    totalVolume: (stand.volumePerHa || 0) * (stand.area || 0),
+    totalVolume: ((stand.volumePerHa || 0) * (stand.areaHa || 0)).toFixed(2),
     age: stand.standAge || '-',
     density: stand.canopyDensity || '-',
     _raw: stand
   }
   
   showPopup(data, coordinate)
-  highlightStandById(stand.id || stand.xiaoBanCode)
+  highlightStandById(stand.standId || stand.id)
 }
 
 const highlightStandById = (standId) => {
@@ -606,7 +647,7 @@ const highlightStandById = (standId) => {
   
   const markers = markerLayer.getSource().getFeatures()
   const marker = markers.find(f => {
-    const fid = f.get('id') || f.get('zone_id') || f.get('stand_id') || f.get('xiao_ban_code')
+    const fid = f.get('standId') || f.get('id') || f.get('zone_id') || f.get('stand_id')
     return String(fid) === String(standId)
   })
   
