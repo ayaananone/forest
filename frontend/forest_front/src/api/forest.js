@@ -12,41 +12,36 @@ const BASE_URL = CONFIG.API_BASE
 
 /**
  * 将后端林分数据转换为前端标准格式
- * 明确字段映射关系：
- * - standId: 数据库主键，用于所有API调用
- * - standNo: 业务编号（小班号），仅用于展示
  */
 function transformStand(backendData) {
     if (!backendData) return null
     
     return {
-        standId: backendData.standId,              // 数据库主键，用于API调用
-        standNo: backendData.xiaoBanCode,          // 小班号，仅展示
+        standId: backendData.standId,
+        standNo: backendData.xiaoBanCode,
         standName: backendData.standName,
-        xiaoBanCode: backendData.xiaoBanCode,      // 林分编号
-        area: backendData.areaHa,                   
-        areaHa: backendData.areaHa,                // 兼容两种命名
+        xiaoBanCode: backendData.xiaoBanCode,
+        areaHa: backendData.areaHa,
         dominantSpecies: backendData.dominantSpecies,
-        volumePerHa: backendData.volumePerHa,      // m³/ha
-        totalVolume: backendData.totalVolume,      // m³ (后端已计算)
+        // speciesComposition 保持原样，不转换
+        speciesComposition: backendData.speciesComposition,
+        volumePerHa: backendData.volumePerHa,
+        totalVolume: backendData.totalVolume,
         centerLon: backendData.centerLon,
         centerLat: backendData.centerLat,
-        age: backendData.standAge,
-        standAge: backendData.standAge,            // 兼容两种命名
-        density: backendData.canopyDensity,        // 郁闭度
-        canopyDensity: backendData.canopyDensity,  // 兼容两种命名
-        origin: backendData.origin,                // 起源
-        siteType: backendData.siteType,            // 立地类型
-        siteClass: backendData.siteClass,          // 立地等级
-        avgHeight: backendData.avgHeight,          // 平均树高
-        avgDbh: backendData.avgDbh,                // 平均胸径
-        speciesComposition: backendData.speciesComposition, // 树种组成
-        elevation: backendData.elevation,          // 海拔
-        slope: backendData.slope,                  // 坡度
-        aspect: backendData.aspect,                // 坡向
-        surveyDate: backendData.surveyDate,        // 调查日期
-        surveyor: backendData.surveyor,            // 调查员
-        remark: backendData.remark,                // 备注
+        standAge: backendData.standAge,
+        canopyDensity: backendData.canopyDensity,
+        siteClass: backendData.siteClass,
+        avgDbh: backendData.avgDbh,
+        avgHeight: backendData.avgHeight,
+        elevation: backendData.elevation,
+        slope: backendData.slope,
+        aspect: backendData.aspect,
+        siteType: backendData.siteType,
+        surveyDate: backendData.surveyDate,
+        surveyor: backendData.surveyor,
+        origin: backendData.origin,
+        remark: backendData.remark,
         createTime: backendData.createTime,
         updateTime: backendData.updateTime,
         createBy: backendData.createBy,
@@ -87,7 +82,7 @@ function transformSpeciesStats(backendDataArray) {
     })
 }
 
-// ==================== API 方法（使用request，自动携带JWT）====================
+// ==================== API 方法 ====================
 
 /**
  * 获取所有林分数据
@@ -153,12 +148,38 @@ export async function fetchStandDetail(standId) {
 }
 
 /**
- * 创建新林分（需要管理员权限）
+ * 创建新林分
  */
 export async function createStand(standData) {
     try {
-        console.log('createStand 提交数据:', standData)
-        const data = await request.post('/stands', standData)
+        // 直接提交所有字段，不处理 speciesComposition
+        const submitData = {
+            xiaoBanCode: standData.xiaoBanCode,
+            standName: standData.standName,
+            dominantSpecies: standData.dominantSpecies,
+            origin: standData.origin,
+            areaHa: standData.areaHa,
+            volumePerHa: standData.volumePerHa,
+            standAge: standData.standAge,
+            canopyDensity: standData.canopyDensity,
+            siteClass: standData.siteClass,
+            avgDbh: standData.avgDbh,
+            avgHeight: standData.avgHeight,
+            elevation: standData.elevation,
+            slope: standData.slope,
+            aspect: standData.aspect,
+            siteType: standData.siteType,
+            // 直接传递，不转换
+            speciesComposition: standData.speciesComposition,
+            surveyDate: standData.surveyDate,
+            surveyor: standData.surveyor,
+            centerLon: standData.centerLon,
+            centerLat: standData.centerLat,
+            remark: standData.remark
+        }
+        
+        console.log('createStand 提交数据:', submitData)
+        const data = await request.post('/stands', submitData)
         console.log('createStand 返回数据:', data)
         return transformStand(data)
     } catch (error) {
@@ -168,12 +189,41 @@ export async function createStand(standData) {
 }
 
 /**
- * 更新林分信息（需要管理员权限）
+ * 更新林分信息
  */
 export async function updateStand(standId, standData) {
     try {
-        console.log('updateStand 提交数据:', standId, standData)
-        const data = await request.put(`/stands/${standId}`, standData)
+        if (!standId) {
+            throw new Error('更新操作需要提供 standId')
+        }
+        
+        const submitData = {
+            xiaoBanCode: standData.xiaoBanCode,
+            standName: standData.standName,
+            dominantSpecies: standData.dominantSpecies,
+            origin: standData.origin,
+            areaHa: standData.areaHa,
+            volumePerHa: standData.volumePerHa,
+            standAge: standData.standAge,
+            canopyDensity: standData.canopyDensity,
+            siteClass: standData.siteClass,
+            avgDbh: standData.avgDbh,
+            avgHeight: standData.avgHeight,
+            elevation: standData.elevation,
+            slope: standData.slope,
+            aspect: standData.aspect,
+            siteType: standData.siteType,
+            // 直接传递，不转换
+            speciesComposition: standData.speciesComposition,
+            surveyDate: standData.surveyDate,
+            surveyor: standData.surveyor,
+            centerLon: standData.centerLon,
+            centerLat: standData.centerLat,
+            remark: standData.remark
+        }
+        
+        console.log('updateStand 提交数据:', standId, submitData)
+        const data = await request.put(`/stands/${standId}`, submitData)
         console.log('updateStand 返回数据:', data)
         return transformStand(data)
     } catch (error) {
@@ -183,10 +233,14 @@ export async function updateStand(standId, standData) {
 }
 
 /**
- * 删除林分（需要管理员权限）
+ * 删除林分
  */
 export async function deleteStand(standId) {
     try {
+        if (!standId) {
+            throw new Error('删除操作需要提供 standId')
+        }
+        
         console.log('deleteStand 删除林分:', standId)
         await request.delete(`/stands/${standId}`)
         console.log('deleteStand 删除成功')
@@ -198,7 +252,7 @@ export async function deleteStand(standId) {
 }
 
 /**
- * 批量导入林分数据（需要管理员权限）
+ * 批量导入林分数据
  */
 export async function importStands(file) {
     try {
@@ -239,9 +293,7 @@ export async function exportStands(format = 'csv', filters = {}) {
 }
 
 /**
- * 导出指定林分的单木数据 - 使用standId
- * @param {string|number} standId - 林分ID（数据库主键）
- * @param {string} format - 导出格式：csv、excel、json
+ * 导出指定林分的单木数据
  */
 export async function exportStandTrees(standId, format = 'csv') {
     if (!standId) {
@@ -252,13 +304,12 @@ export async function exportStandTrees(standId, format = 'csv') {
     
     const response = await request.get('/trees/stand/export', {
         params: {
-            standId: standIdStr,  // 明确使用standId参数
+            standId: standIdStr,
             format: format
         },
         responseType: 'blob'
     })
     
-    // 从响应头获取文件名
     const contentDisposition = response.headers?.['content-disposition']
     let filename = `林分_${standIdStr}_单木数据.${format === 'excel' ? 'xlsx' : format}`
     
@@ -275,9 +326,6 @@ export async function exportStandTrees(standId, format = 'csv') {
 
 // ==================== 辅助工具函数 ====================
 
-/**
- * 下载Blob文件
- */
 function downloadBlob(blobData, filename) {
     const blob = blobData instanceof Blob ? blobData : new Blob([blobData])
     const url = window.URL.createObjectURL(blob)
@@ -290,14 +338,10 @@ function downloadBlob(blobData, filename) {
     window.URL.revokeObjectURL(url)
 }
 
-// ==================== GeoServer WFS/WMS 方法（无需JWT，直接访问）====================
+// ==================== GeoServer WFS/WMS 方法 ====================
 
-/**
- * WFS查询林分几何（GeoServer）
- */
 export async function fetchStandGeometry(standId) {
     try {
-        // 注意：WFS使用数据库字段名 zone_id
         const url = `${CONFIG.GEOSERVER_URL}/wfs?service=WFS&version=1.1.0&request=GetFeature&` +
             `typename=forest:forest_stand&outputFormat=application/json&` +
             `cql_filter=zone_id=${standId}`
@@ -311,9 +355,6 @@ export async function fetchStandGeometry(standId) {
     }
 }
 
-/**
- * WMS GetFeatureInfo 查询
- */
 export async function fetchWMSFeatureInfo(lon, lat, width = 101, height = 101) {
     try {
         const params = new URLSearchParams({
@@ -347,7 +388,7 @@ export async function fetchWMSFeatureInfo(lon, lat, width = 101, height = 101) {
  * 计算两点间距离（米）
  */
 export function calculateDistance(lon1, lat1, lon2, lat2) {
-    const R = 6371000 // 地球半径（米）
+    const R = 6371000
     const dLat = (lat2 - lat1) * Math.PI / 180
     const dLon = (lon2 - lon1) * Math.PI / 180
     const a = Math.sin(dLat/2) * Math.sin(dLat/2) +

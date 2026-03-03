@@ -25,7 +25,7 @@ public class ForestStandServiceImpl implements ForestStandService {
 
     private final ForestStandMapper standMapper;
 
-    // ==================== 原有方法（保持不变）====================
+    // ==================== 查询方法 ====================
 
     @Override
     public List<StandDTO> getAllStands() {
@@ -75,21 +75,24 @@ public class ForestStandServiceImpl implements ForestStandService {
         return stats;
     }
 
+    // ==================== CRUD方法 ====================
+
     @Override
     @Transactional
     public StandDTO createStand(StandDTO dto, String operator) {
         // 检查编号重复
-        ForestStand exist = standMapper.findById(dto.getStandId());
-        if (exist != null) {
-            throw new RuntimeException("林分编号已存在: " + dto.getXiaoBanCode());
+        if (dto.getXiaoBanCode() != null) {
+            ForestStand exist = standMapper.findByXiaoBanCode(dto.getXiaoBanCode());
+            if (exist != null) {
+                throw new RuntimeException("林分编号已存在: " + dto.getXiaoBanCode());
+            }
         }
 
         ForestStand entity = new ForestStand();
         BeanUtils.copyProperties(dto, entity);
 
         // 设置系统字段
-        entity.setStandId(null);
-        entity.setSurveyDate(LocalDate.now());
+        entity.setSurveyDate(dto.getSurveyDate() != null ? dto.getSurveyDate() : LocalDate.now());
         entity.setCreateTime(LocalDateTime.now());
         entity.setUpdateTime(LocalDateTime.now());
         entity.setCreateBy(operator);
@@ -106,7 +109,7 @@ public class ForestStandServiceImpl implements ForestStandService {
 
         standMapper.insert(entity);
 
-        log.info("创建林分成功: id={}, code={}", entity.getStandId(), entity.getXiaoBanCode());
+        log.info("创建林分成功: standId={}, xiaoBanCode={}", entity.getStandId(), entity.getXiaoBanCode());
 
         return convertToDTO(entity);
     }
@@ -122,7 +125,7 @@ public class ForestStandServiceImpl implements ForestStandService {
         // 检查编号是否被其他记录使用
         if (!exist.getXiaoBanCode().equals(dto.getXiaoBanCode())) {
             ForestStand codeExist = standMapper.findByXiaoBanCode(dto.getXiaoBanCode());
-            if (codeExist != null) {
+            if (codeExist != null && !codeExist.getStandId().equals(dto.getStandId())) {
                 throw new RuntimeException("林分编号已存在: " + dto.getXiaoBanCode());
             }
         }
@@ -138,15 +141,16 @@ public class ForestStandServiceImpl implements ForestStandService {
         exist.setUpdateTime(LocalDateTime.now());
         exist.setUpdateBy(operator);
 
-        // 重新计算
+        // 重新计算总蓄积
         if (exist.getAreaHa() != null && exist.getVolumePerHa() != null) {
             exist.setTotalVolume(exist.getAreaHa() * exist.getVolumePerHa());
         }
+
         parseXiaoBanCode(exist);
 
         standMapper.update(exist);
 
-        log.info("更新林分成功: id={}", exist.getStandId());
+        log.info("更新林分成功: standId={}", exist.getStandId());
 
         return convertToDTO(exist);
     }
@@ -166,7 +170,7 @@ public class ForestStandServiceImpl implements ForestStandService {
 
         standMapper.update(exist);
 
-        log.info("删除林分成功: id={}", id);
+        log.info("删除林分成功: standId={}", id);
     }
 
     @Override
@@ -191,6 +195,7 @@ public class ForestStandServiceImpl implements ForestStandService {
         }
         return excludeId == null || !excludeId.equals(stand.getStandId());
     }
+
     // ==================== 私有方法 ====================
 
     private void parseXiaoBanCode(ForestStand stand) {
@@ -203,20 +208,20 @@ public class ForestStandServiceImpl implements ForestStandService {
         }
     }
 
+    /**
+     * 转换为DTO - 简化处理，直接复制所有字段
+     */
     private StandDTO convertToDTO(ForestStand stand) {
         StandDTO dto = new StandDTO();
-        dto.setStandId(stand.getStandId());
-        dto.setXiaoBanCode(stand.getXiaoBanCode());
-        dto.setStandName(stand.getStandName());
-        dto.setAreaHa(stand.getAreaHa());
-        dto.setDominantSpecies(stand.getDominantSpecies());
-        dto.setStandAge(stand.getStandAge());
-        dto.setVolumePerHa(stand.getVolumePerHa());
-        dto.setTotalVolume(stand.getTotalVolume());
-        dto.setCanopyDensity(stand.getCanopyDensity());
-        dto.setCenterLon(stand.getCenterLon());
-        dto.setCenterLat(stand.getCenterLat());
-        dto.setOrigin(stand.getOrigin());
+
+        // 使用 BeanUtils 复制所有相同命名字段
+        BeanUtils.copyProperties(stand, dto);
+
+        // 确保 totalVolume 被正确设置（可能被覆盖，重新计算）
+        if (dto.getTotalVolume() == null && dto.getAreaHa() != null && dto.getVolumePerHa() != null) {
+            dto.setTotalVolume(dto.getAreaHa() * dto.getVolumePerHa());
+        }
+
         return dto;
     }
 
