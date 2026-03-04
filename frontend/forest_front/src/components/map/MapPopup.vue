@@ -24,7 +24,7 @@
           </el-descriptions-item>
           
           <el-descriptions-item label="小班号">
-            {{ content?.xiaobancode || '-' }}
+            {{ content?.xiaoBanCode || content?.standNo || content?.xiao_ban_code || '-' }}
           </el-descriptions-item>
           
           <el-descriptions-item label="优势树种">
