@@ -330,8 +330,8 @@ export function useLayers(map) {
     // ==================== 数据加载 ====================
 
     /**
-     * 从 API 加载林分标记数据
-     */
+    * 从 API 加载林分标记数据
+    */
     const loadStandsMarkers = async () => {
         const markerLayer = getLayerByName('stands_markers')
         if (!markerLayer) {
@@ -342,7 +342,6 @@ export function useLayers(map) {
         try {
             console.log('正在加载林分标记数据...')
             
-            // 使用 request 替代 fetch
             const stands = await request.get('/stands')
             
             if (!Array.isArray(stands) || stands.length === 0) {
@@ -351,52 +350,61 @@ export function useLayers(map) {
             }
 
             const features = stands.map(stand => {
-                if (!stand.centerLon || !stand.centerLat) {
-                    console.warn(`林分 ${stand.standId} 缺少坐标`)
-                    return null
-                }
+            if (!stand.centerLon || !stand.centerLat) {
+                console.warn(`林分 ${stand.standId} 缺少坐标`)
+                return null
+            }
+            
+            if (!stand.standId) {
+                console.warn('林分缺少 standId:', stand)
+                return null
+            }
+
+            // 创建 Feature 时确保所有关键字段都被正确设置
+            const feature = new Feature({
+                geometry: new Point(fromLonLat([stand.centerLon, stand.centerLat])),
                 
-                // 修复：统一字段名，与弹窗查找逻辑匹配
-                return new Feature({
-                    geometry: new Point(fromLonLat([stand.centerLon, stand.centerLat])),
-                    // 主键 ID（多种可能的名字，确保兼容性）
-                    standId: stand.standId,
-                    stand_id: stand.standId,
-                    id: stand.standId,
-                    zone_id: stand.standId,
-                    
-                    // 小班编码
-                    xiaoBanCode: stand.xiaoBanCode,
-                    xiao_ban_code: stand.xiaoBanCode,
-                    standNo: stand.xiaoBanCode,
-                    
-                    // 名称
-                    standName: stand.standName,
-                    stand_name: stand.standName,
-                    
-                    // 其他字段...
-                    dominantSpecies: stand.dominantSpecies,
-                    dominant_species: stand.dominantSpecies,
-                    volumePerHa: stand.volumePerHa,
-                    volume_per_ha: stand.volumePerHa,
-                    areaHa: stand.areaHa,
-                    area_ha: stand.areaHa,
-                    area: stand.areaHa,  // 兼容性
-                    origin: stand.origin,
-                    standAge: stand.standAge,
-                    stand_age: stand.standAge,
-                    canopyDensity: stand.canopyDensity,
-                    canopy_density: stand.canopyDensity,
-                    
-                    // 保留原始数据
-                    ...stand
-                })
-            }).filter(f => f !== null)
+                // 标准字段名（驼峰）- 用于显示
+                standId: stand.standId,
+                xiaoBanCode: stand.xiaoBanCode || '-',
+                standName: stand.standName || '未命名',
+                areaHa: stand.areaHa || 0,
+                volumePerHa: stand.volumePerHa || 0,
+                totalVolume: stand.totalVolume || 0,
+                dominantSpecies: stand.dominantSpecies || '未知',
+                origin: stand.origin || '未知',
+                standAge: stand.standAge || '-',
+                canopyDensity: stand.canopyDensity || '-',
+                centerLon: stand.centerLon,
+                centerLat: stand.centerLat,
+                
+                // 下划线版本（兼容性）
+                stand_id: stand.standId,
+                xiao_ban_code: stand.xiaoBanCode || '-',
+                stand_name: stand.standName || '未命名',
+                area_ha: stand.areaHa || 0,
+                volume_per_ha: stand.volumePerHa || 0,
+                total_volume: stand.totalVolume || 0,
+                dominant_species: stand.dominantSpecies || '未知',
+                stand_age: stand.standAge || '-',
+                canopy_density: stand.canopyDensity || '-',
+                
+                // 原始完整数据（备用）- 确保包含所有可能的字段
+                _raw: { ...stand }
+            })
+
+            // 显式设置 Feature ID，这对识别非常重要
+            feature.setId(stand.standId)
+            
+            return feature
+        }).filter(f => f !== null)
 
             markerLayer.getSource().clear()
             markerLayer.getSource().addFeatures(features)
             
             console.log(`✓ 加载了 ${features.length} 个林分标记`)
+            
+            markerLayer.changed()
             
             if (wmsError.value) {
                 markerLayer.setVisible(true)
@@ -404,7 +412,6 @@ export function useLayers(map) {
             
         } catch (error) {
             console.error('❌ 加载林分标记失败:', error.message)
-            console.info('💡 请检查：1. API 服务是否启动 2. 网络连接是否正常')
         }
     }
 

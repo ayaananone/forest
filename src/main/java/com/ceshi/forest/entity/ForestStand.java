@@ -8,28 +8,15 @@ import java.time.LocalDateTime;
 public class ForestStand {
     private Integer standId;
 
-    // ==================== 新增字段 ====================
-
     private Integer zoneId;
-
     private String xiaoBanCode;
-
     private String linBan;
-
     private String xiaoBan;
-
     private LocalDateTime createTime;
-
     private LocalDateTime updateTime;
-
     private String createBy;
-
     private String updateBy;
-
     private Boolean deleted;
-
-    // ==================== 原有字段 ====================
-
     private String standName;
     private Double areaHa;
     private String dominantSpecies;

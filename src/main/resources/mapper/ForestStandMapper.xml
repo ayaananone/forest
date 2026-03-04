@@ -3,12 +3,13 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.ceshi.forest.mapper.ForestStandMapper">
 
-    <!-- 结果映射 -->
+    <!-- 结果映射 - 修复：明确指定所有字段映射 -->
     <resultMap id="BaseResultMap" type="com.ceshi.forest.entity.ForestStand">
         <id column="stand_id" property="standId"/>
         <result column="zone_id" property="zoneId"/>
         <result column="lin_ban" property="linBan"/>
         <result column="xiao_ban" property="xiaoBan"/>
+        <!-- 关键：确保 xiao_ban_code 正确映射到 xiaoBanCode -->
         <result column="xiao_ban_code" property="xiaoBanCode"/>
         <result column="stand_name" property="standName"/>
         <result column="area_ha" property="areaHa"/>
@@ -45,12 +46,41 @@
         create_time, update_time, create_by, update_by, deleted
     </sql>
 
-    <!-- 查询所有（排除已删除） -->
-    <select id="findAll" resultMap="BaseResultMap">
-        SELECT <include refid="Base_Column_List"/>
+    <!-- 查询所有 -->
+    <select id="findAll" resultType="com.ceshi.forest.entity.ForestStand">
+        SELECT
+            stand_id as standId,
+            zone_id as zoneId,
+            lin_ban as linBan,
+            xiao_ban as xiaoBan,
+            xiao_ban_code as xiaoBanCode,
+            stand_name as standName,
+            area_ha as areaHa,
+            site_type as siteType,
+            origin as origin,
+            stand_age as standAge,
+            canopy_density as canopyDensity,
+            avg_height as avgHeight,
+            avg_dbh as avgDbh,
+            volume_per_ha as volumePerHa,
+            total_volume as totalVolume,
+            dominant_species as dominantSpecies,
+            species_composition as speciesComposition,
+            center_lon as centerLon,
+            center_lat as centerLat,
+            elevation as elevation,
+            slope as slope,
+            aspect as aspect,
+            survey_date as surveyDate,
+            surveyor as surveyor,
+            create_time as createTime,
+            update_time as updateTime,
+            create_by as createBy,
+            update_by as updateBy,
+            deleted as deleted
         FROM forest_stand
         WHERE deleted = 0
-        ORDER BY xiao_ban_code
+        ORDER BY stand_id
     </select>
 
     <!-- 根据ID查询 -->
@@ -86,7 +116,7 @@
         FROM forest_stand
         WHERE dominant_species = #{species}
         AND deleted = 0
-        ORDER BY xiao_ban_code
+        ORDER BY stand_id
     </select>
 
     <!-- 按公顷蓄积量查询 -->
@@ -126,7 +156,6 @@
                                          )) AS distance
                           FROM forest_stand
                           WHERE deleted = 0
-                            -- 使用边界框预过滤，减少计算量
                             AND center_lat BETWEEN
                               #{lat} - degrees(#{radius}::float / 6371000.0)
                               AND #{lat} + degrees(#{radius}::float / 6371000.0)
@@ -222,6 +251,5 @@
                        0
                )
     </select>
-
 
 </mapper>

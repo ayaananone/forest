@@ -249,35 +249,75 @@ export function useMap(targetId, options = {}) {
 
     // 显示林场详细信息弹窗
     const showStandDetailPopup = (feature, coordinate) => {
+        if (!feature || !feature.getProperties) {
+            console.error('无效的 feature:', feature)
+            return
+        }
+
         const props = feature.getProperties()
-        console.log('原始属性:', JSON.stringify(props, null, 2))
 
-        // 修复：更宽松的字段名匹配
-        const standId = props.standId || 
-                    props.stand_id || 
-                    props.id || 
-                    props.zone_id ||
-                    props.standId ||
-                    feature.getId()  // OpenLayers 自带的 ID
-        
-        // 修复：更宽松的小班编码匹配
-        const xiaoBanCode = props.xiaoBanCode || 
-                        props.xiao_ban_code || 
-                        props.standNo ||
-                        props.stand_no ||
-                        props.xiaoBan ||
-                        '-'
-        
-        console.log('standId:', standId, 'xiaoBanCode:', xiaoBanCode)
+        // 健壮的属性获取函数 - 检查多种可能的来源
+        const getProp = (...names) => {
+            // 1. 首先检查 feature 的直接属性
+            for (const name of names) {
+                if (name === undefined) continue
+                const value = props[name]
+                if (value !== undefined && value !== null && value !== '') {
+                    return value
+                }
+            }
+            
+            // 2. 检查 _raw 原始数据（API返回的完整数据）
+            if (props._raw) {
+                for (const name of names) {
+                    if (name === undefined) continue
+                    const rawValue = props._raw[name]
+                    if (rawValue !== undefined && rawValue !== null && rawValue !== '') {
+                        return rawValue
+                    }
+                }
+            }
+            
+            // 3. 检查 feature 的 ID
+            if (names.includes('standId') || names.includes('stand_id')) {
+                const fid = feature.getId()
+                if (fid) return fid
+            }
+            
+            return null
+        }
 
-        // 其他代码保持不变...
-        const area = parseFloat(props.areaHa) || parseFloat(props.area_ha) || parseFloat(props.area) || 0
+        // 获取 standId - 优先级：standId > stand_id > id > zone_id > feature.getId()
+        let standId = getProp('standId', 'stand_id', 'id', 'zone_id')
+        if (!standId) {
+            console.warn('无法获取 standId，尝试备用方案')
+            standId = feature.getId() || '-'
+        }
+
+        // 获取小班号 - 优先级：xiaoBanCode > xiao_ban_code > standNo
+        let xiaoBanCode = getProp('xiaoBanCode', 'xiao_ban_code', 'standNo', 'stand_no')
         
-        const volumePerHa = parseFloat(props.volumePerHa) || 
-                        parseFloat(props.volume_per_ha) || 0
+        // 如果还是获取不到，尝试从 _raw 中深度查找
+        if (!xiaoBanCode && props._raw) {
+            const raw = props._raw
+            xiaoBanCode = raw.xiaoBanCode || raw.xiao_ban_code || raw.xiaoBan || raw.xiao_ban
+        }
         
-        let totalVolume = parseFloat(props.totalVolume) || 
-                        parseFloat(props.total_volume) || 0
+        // 最后的兜底：尝试从其他字段推断
+        if (!xiaoBanCode) {
+            const name = getProp('standName', 'stand_name', 'name')
+            if (name && typeof name === 'string' && name.includes('班')) {
+                const match = name.match(/(\d+班)/)
+                if (match) xiaoBanCode = match[1]
+            }
+        }
+
+        console.log('【调试】解析结果 - standId:', standId, 'xiaoBanCode:', xiaoBanCode || '-')
+
+        // 面积和蓄积量计算
+        const area = parseFloat(getProp('areaHa', 'area_ha', 'area') || 0) || 0
+        const volumePerHa = parseFloat(getProp('volumePerHa', 'volume_per_ha', 'volume') || 0) || 0
+        let totalVolume = parseFloat(getProp('totalVolume', 'total_volume', 'total') || 0) || 0
         
         if (totalVolume === 0 && area > 0 && volumePerHa > 0) {
             totalVolume = area * volumePerHa
@@ -285,28 +325,28 @@ export function useMap(targetId, options = {}) {
 
         const data = {
             type: 'stand_detail',
-            id: standId,
-            xiaoBanCode: xiaoBanCode,
-            name: props.standName || props.stand_name || props.name || '未命名林分',
+            id: standId || '-',
+            xiaoBanCode: xiaoBanCode || '-',
+            name: getProp('standName', 'stand_name', 'name') || '未命名林分',
             downloadId: standId,
-            displayNo: xiaoBanCode,
-            species: props.dominantSpecies || props.dominant_species || '未知',
-            origin: props.origin || '未知',
-            area: area,
-            volumePerHa: volumePerHa,
-            totalVolume: totalVolume,
-            age: props.standAge || props.stand_age || '-',
-            density: props.canopyDensity || props.canopy_density || '-',
-            aspect: props.aspect || '未知',
-            slope: props.slope || '-',
-            altitude: props.elevation || props.altitude || '-'
+            displayNo: xiaoBanCode || standId || '-',
+            species: getProp('dominantSpecies', 'dominant_species', 'species') || '未知',
+            origin: getProp('origin', 'forest_origin', 'type') || '未知',
+            area: Math.round(area * 100) / 100,
+            volumePerHa: Math.round(volumePerHa * 100) / 100,
+            totalVolume: Math.round(totalVolume * 100) / 100,
+            age: getProp('standAge', 'stand_age', 'age') || '-',
+            density: getProp('canopyDensity', 'canopy_density', 'density') || '-',
+            aspect: getProp('aspect', 'direction') || '未知',
+            slope: getProp('slope', 'gradient') || '-',
+            altitude: getProp('elevation', 'altitude', 'height') || '-'
         }
         
-        console.log('Popup data prepared:', data)
+        console.log('【调试】Popup data prepared:', data)
         showPopup(data, coordinate)
         
         // 高亮该林场
-        if (standId) {
+        if (standId && standId !== '-') {
             highlightStand(feature)
         }
     }

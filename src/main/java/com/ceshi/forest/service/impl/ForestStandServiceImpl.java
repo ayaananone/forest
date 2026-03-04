@@ -145,9 +145,12 @@ public class ForestStandServiceImpl implements ForestStandService {
 
     private StandDTO convertToDTO(ForestStand stand) {
         StandDTO dto = new StandDTO();
+
         dto.setStandId(stand.getStandId());
         dto.setStandName(stand.getStandName());
         dto.setAreaHa(stand.getAreaHa());
+        dto.setXiaoBanCode(stand.getXiaoBanCode());
+
         dto.setDominantSpecies(stand.getDominantSpecies());
         dto.setStandAge(stand.getStandAge());
         dto.setVolumePerHa(stand.getVolumePerHa());
@@ -156,6 +159,11 @@ public class ForestStandServiceImpl implements ForestStandService {
         dto.setCenterLon(stand.getCenterLon());
         dto.setCenterLat(stand.getCenterLat());
         dto.setOrigin(stand.getOrigin());
+
+        // 调试日志
+        if (dto.getXiaoBanCode() == null) {
+            log.warn("转换 DTO 时 xiaoBanCode 为 null, standId={}", stand.getStandId());
+        }
         return dto;
     }
 }
