@@ -79,6 +79,15 @@ public class GeoserverProxyController {
         }
     }
 
+    @GetMapping("/3dtiles/{layer}/tileset.json")
+    public ResponseEntity<String> get3DTileset(@PathVariable String layer) {
+        // 返回 3D Tiles 元数据（如果你有倾斜摄影数据）
+        String tilesetUrl = geoserverUrl + "/gwc/service/tms/1.0.0/" + layer + "@EPSG%3A4326@3dtiles";
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_JSON)
+                .body("{\"url\": \"" + tilesetUrl + "\"}");
+    }
+
     /**
      * 构建响应头
      * @param sourceHeaders 原始响应头

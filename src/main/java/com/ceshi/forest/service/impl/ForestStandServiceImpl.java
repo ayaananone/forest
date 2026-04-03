@@ -146,24 +146,51 @@ public class ForestStandServiceImpl implements ForestStandService {
     private StandDTO convertToDTO(ForestStand stand) {
         StandDTO dto = new StandDTO();
 
+        // 基本信息
         dto.setStandId(stand.getStandId());
         dto.setStandName(stand.getStandName());
-        dto.setAreaHa(stand.getAreaHa());
         dto.setXiaoBanCode(stand.getXiaoBanCode());
+        dto.setAreaHa(stand.getAreaHa());
+        dto.setZoneId(stand.getZoneId());
 
+        // 树种信息
         dto.setDominantSpecies(stand.getDominantSpecies());
-        dto.setStandAge(stand.getStandAge());
+        dto.setSpeciesComposition(stand.getSpeciesComposition());
+
+        // 蓄积信息
         dto.setVolumePerHa(stand.getVolumePerHa());
         dto.setTotalVolume(stand.getTotalVolume());
+
+        // 林分特征
+        dto.setStandAge(stand.getStandAge());
         dto.setCanopyDensity(stand.getCanopyDensity());
+        dto.setAvgDbh(stand.getAvgDbh());
+        dto.setAvgHeight(stand.getAvgHeight());
+
+        // 地形因子
+        dto.setElevation(stand.getElevation());
+        dto.setSlope(stand.getSlope());
+        dto.setAspect(stand.getAspect());
+        dto.setSiteType(stand.getSiteType());
+
+        // 位置信息
         dto.setCenterLon(stand.getCenterLon());
         dto.setCenterLat(stand.getCenterLat());
+
+        // 调查信息
+        dto.setSurveyDate(stand.getSurveyDate());
+        dto.setSurveyor(stand.getSurveyor());
+
+        // 其他
         dto.setOrigin(stand.getOrigin());
+        dto.setSiteClass(stand.getSiteClass());
+        dto.setRemark(stand.getRemark());
 
         // 调试日志
         if (dto.getXiaoBanCode() == null) {
             log.warn("转换 DTO 时 xiaoBanCode 为 null, standId={}", stand.getStandId());
         }
+
         return dto;
     }
 }

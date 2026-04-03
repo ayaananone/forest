@@ -7,7 +7,6 @@ import java.time.LocalDateTime;
 @Data
 public class ForestStand {
     private Integer standId;
-
     private Integer zoneId;
     private String xiaoBanCode;
     private String linBan;
@@ -25,7 +24,6 @@ public class ForestStand {
     private Double volumePerHa;
     private Double totalVolume;
     private Double canopyDensity;
-    private Integer siteClass;
     private String aspect;
     private Double avgDbh;
     private Double avgHeight;
@@ -38,4 +36,5 @@ public class ForestStand {
     private Double centerLat;
     private String origin;
     private String remark;
+    private Integer siteClass;
 }

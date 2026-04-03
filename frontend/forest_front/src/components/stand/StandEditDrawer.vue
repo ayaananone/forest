@@ -30,6 +30,18 @@
       <el-divider content-position="left">
         <span class="section-title">基本信息</span>
       </el-divider>
+
+      <el-form-item label="分区ID" prop="zoneId">
+        <el-input-number 
+          v-model="formData.zoneId" 
+          :min="1" 
+          :precision="0" 
+          style="width: 100%" 
+          :size="isMobile ? 'large' : 'default'" 
+          controls-position="right" 
+        />
+      </el-form-item>
+
       
       <div class="form-section">
         <el-form-item label="林分编号" prop="xiaoBanCode">
@@ -90,8 +102,8 @@
           
           <div class="form-section">
             <el-row :gutter="isMobile ? 0 : 16">
-              <el-col :span="isMobile ? 24 : 8">
-                <el-form-item label="面积 (ha)" prop="areaHa">
+              <el-col :span="isMobile ? 24 : 12">
+                <el-form-item label="面积 (ha)" prop="areaHa" class="compact-label wide-input">
                   <el-input-number 
                     v-model="formData.areaHa" 
                     :min="0.01"
@@ -100,11 +112,12 @@
                     style="width: 100%"
                     :size="isMobile ? 'large' : 'default'"
                     placeholder="0.00"
+                    controls-position="right"
                   />
                 </el-form-item>
               </el-col>
-              <el-col :span="isMobile ? 24 : 8">
-                <el-form-item label="每公顷蓄积 (m³)" prop="volumePerHa">
+              <el-col :span="isMobile ? 24 : 12">
+                <el-form-item label="每公顷蓄积 (m³)" prop="volumePerHa" class="compact-label wide-input">
                   <el-input-number 
                     v-model="formData.volumePerHa" 
                     :min="0"
@@ -112,11 +125,14 @@
                     style="width: 100%"
                     :size="isMobile ? 'large' : 'default'"
                     placeholder="0.00"
+                    controls-position="right"
                   />
                 </el-form-item>
               </el-col>
-              <el-col :span="isMobile ? 24 : 8">
-                <el-form-item label="总蓄积">
+            </el-row>
+            <el-row :gutter="isMobile ? 0 : 16" style="margin-top: 8px;">
+              <el-col :span="isMobile ? 24 : 12">
+                <el-form-item label="总蓄积" class="compact-label compact-volume">
                   <div class="total-volume-display">
                     <span class="volume-value">{{ totalVolume.toFixed(2) }}</span>
                     <span class="volume-unit">m³</span>
@@ -136,18 +152,19 @@
           
           <div class="form-section">
             <el-row :gutter="isMobile ? 0 : 16">
-              <el-col :span="isMobile ? 24 : 8">
-                <el-form-item label="林龄 (年)" prop="standAge">
+              <el-col :span="isMobile ? 24 : 12">
+                <el-form-item label="林龄 (年)" prop="standAge" class="compact-label wide-input">
                   <el-input-number 
                     v-model="formData.standAge" 
                     :min="1"
                     :max="200"
                     style="width: 100%"
                     :size="isMobile ? 'large' : 'default'"
+                    controls-position="right"
                   />
                 </el-form-item>
               </el-col>
-              <el-col :span="isMobile ? 24 : 8">
+              <el-col :span="isMobile ? 24 : 12">
                 <el-form-item label="郁闭度" prop="canopyDensity">
                   <el-slider 
                     v-model="formData.canopyDensity" 
@@ -158,7 +175,9 @@
                   />
                 </el-form-item>
               </el-col>
-              <el-col :span="isMobile ? 24 : 8">
+            </el-row>
+            <el-row :gutter="isMobile ? 0 : 16" style="margin-top: 8px;">
+              <el-col :span="isMobile ? 24 : 12">
                 <el-form-item label="立地等级" prop="siteClass">
                   <el-rate
                     v-model="formData.siteClass"
@@ -172,36 +191,41 @@
             </el-row>
 
             <el-row :gutter="isMobile ? 0 : 16">
-              <el-col :span="isMobile ? 24 : 8">
-                <el-form-item label="平均胸径(cm)" prop="avgDbh">
+              <el-col :span="isMobile ? 24 : 12">
+                <el-form-item label="平均胸径(cm)" prop="avgDbh" class="compact-label wide-input">
                   <el-input-number 
                     v-model="formData.avgDbh" 
                     :min="0"
                     :precision="1"
                     style="width: 100%"
                     :size="isMobile ? 'large' : 'default'"
+                    controls-position="right"
                   />
                 </el-form-item>
               </el-col>
-              <el-col :span="isMobile ? 24 : 8">
-                <el-form-item label="平均树高(m)" prop="avgHeight">
+              <el-col :span="isMobile ? 24 : 12">
+                <el-form-item label="平均树高(m)" prop="avgHeight" class="compact-label wide-input">
                   <el-input-number 
                     v-model="formData.avgHeight" 
                     :min="0"
                     :precision="2"
                     style="width: 100%"
                     :size="isMobile ? 'large' : 'default'"
+                    controls-position="right"
                   />
                 </el-form-item>
               </el-col>
-              <el-col :span="isMobile ? 24 : 8">
-                <el-form-item label="海拔(m)" prop="elevation">
+            </el-row>
+            <el-row :gutter="isMobile ? 0 : 16" style="margin-top: 8px;">
+              <el-col :span="isMobile ? 24 : 12">
+                <el-form-item label="海拔(m)" prop="elevation" class="compact-label wide-input">
                   <el-input-number 
                     v-model="formData.elevation" 
                     :min="0"
                     :precision="0"
                     style="width: 100%"
                     :size="isMobile ? 'large' : 'default'"
+                    controls-position="right"
                   />
                 </el-form-item>
               </el-col>
@@ -219,7 +243,7 @@
           <div class="form-section">
             <el-row :gutter="isMobile ? 0 : 16">
               <el-col :span="isMobile ? 24 : 12">
-                <el-form-item label="坡度(°)" prop="slope">
+                <el-form-item label="坡度(°)" prop="slope" class="compact-label wide-input">
                   <el-input-number 
                     v-model="formData.slope" 
                     :min="0"
@@ -227,7 +251,7 @@
                     :precision="2"
                     style="width: 100%"
                     :size="isMobile ? 'large' : 'default'"
-                  />
+                  controls-position="right" />
                 </el-form-item>
               </el-col>
               <el-col :span="isMobile ? 24 : 12">
@@ -272,51 +296,32 @@
           
           <div class="form-section">
             <div class="composition-list">
-              <div 
-                v-for="(item, index) in formData.speciesComposition" 
-                :key="index"
-                class="composition-item"
-              >
+              <div v-for="(item, index) in formData.speciesComposition" :key="index" class="composition-item" >
                 <el-row :gutter="8">
                   <el-col :span="12">
-                    <el-select 
-                      v-model="item.species" 
-                      placeholder="选择树种"
-                      style="width: 100%"
-                      :size="isMobile ? 'large' : 'default'"
-                    >
-                      <el-option
-                        v-for="species in speciesOptions"
-                        :key="species"
-                        :label="species"
-                        :value="species"
-                      />
+                    <el-select v-model="item.species" placeholder="选择树种" style="width: 100%" :size="isMobile ? 'large' : 'default'" >
+                      <el-option v-for="species in speciesOptions" :key="species" :label="species" :value="species" />
                     </el-select>
                   </el-col>
                   <el-col :span="8">
                     <el-input-number 
                       v-model="item.ratio" 
-                      :min="0"
-                      :max="1"
-                      :precision="2"
-                      :step="0.1"
-                      style="width: 100%"
-                      :size="isMobile ? 'large' : 'default'"
-                      placeholder="比例"
+                      :min="0" 
+                      :max="getMaxRatio(index)" 
+                      :precision="2" 
+                      :step="0.1" 
+                      style="width: 100%" 
+                      :size="isMobile ? 'large' : 'default'" 
+                      placeholder="比例" 
+                      controls-position="right" 
                     />
                   </el-col>
                   <el-col :span="4">
-                    <el-button 
-                      type="danger" 
-                      link 
-                      :size="isMobile ? 'large' : 'default'"
-                      @click="removeCompositionItem(index)"
-                    >
-                      <el-icon><Delete /></el-icon>
-                    </el-button>
+                    <el-button type="danger" link> <el-icon><Delete /></el-icon> </el-button>
                   </el-col>
                 </el-row>
               </div>
+
               <el-button 
                 type="primary" 
                 link 
@@ -380,7 +385,7 @@
                     :precision="6"
                     style="width: 100%"
                     :size="isMobile ? 'large' : 'default'"
-                  />
+                  controls-position="right" />
                 </el-form-item>
               </el-col>
               <el-col :span="isMobile ? 24 : 12">
@@ -390,7 +395,7 @@
                     :precision="6"
                     style="width: 100%"
                     :size="isMobile ? 'large' : 'default'"
-                  />
+                  controls-position="right" />
                 </el-form-item>
               </el-col>
             </el-row>
@@ -507,7 +512,6 @@ const emit = defineEmits(['update:modelValue', 'submit', 'delete', 'location-cha
 const formRef = ref(null)
 const submitting = ref(false)
 
-// 移动端检测
 const isMobile = ref(false)
 const checkMobile = () => {
   isMobile.value = window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
@@ -517,14 +521,12 @@ onMounted(() => {
   checkMobile()
   window.addEventListener('resize', checkMobile)
 })
-
 onUnmounted(() => {
   window.removeEventListener('resize', checkMobile)
 })
 
-// 折叠面板控制
-const activeSections = ref(['area', 'feature']) // 默认展开前两个
-const totalSections = 6
+const activeSections = ref(['area', 'feature'])
+const totalSections = 7
 
 const currentSection = computed(() => {
   const sectionMap = { 'area': 1, 'feature': 2, 'terrain': 3, 'composition': 4, 'survey': 5, 'location': 6, 'remark': 7 }
@@ -533,7 +535,6 @@ const currentSection = computed(() => {
 
 const progressPercent = computed(() => (currentSection.value / totalSections) * 100)
 
-// 数据填充状态检测
 const hasAreaData = computed(() => formData.value.areaHa && formData.value.volumePerHa)
 const hasFeatureData = computed(() => formData.value.standAge || formData.value.avgDbh || formData.value.avgHeight)
 const hasTerrainData = computed(() => formData.value.slope || formData.value.aspect || formData.value.siteType)
@@ -549,7 +550,24 @@ const isEdit = computed(() => !!props.editData?.standId)
 const hasLocation = computed(() => formData.value.centerLon && formData.value.centerLat)
 const totalVolume = computed(() => (formData.value.areaHa || 0) * (formData.value.volumePerHa || 0))
 
+// 计算总和
+const compositionRatioSum = computed(() => {
+  if (!formData.value.speciesComposition || formData.value.speciesComposition.length === 0) return 0
+  return formData.value.speciesComposition.reduce((sum, item) => sum + (Number(item.ratio) || 0), 0)
+})
+
+const getMaxRatio = (currentIndex) => {
+  // 算出除了当前项之外，其他项的总和
+  const otherSum = formData.value.speciesComposition.reduce((sum, item, index) => {
+    return index === currentIndex ? sum : sum + (Number(item.ratio) || 0)
+  }, 0)
+  // 剩余空间 = 1 - 其他项总和，至少为 0
+  return Math.max(0, +(1 - otherSum).toFixed(2))
+}
+
 const defaultForm = {
+  zoneId: undefined,
+  standId: null,
   xiaoBanCode: '',
   standName: '',
   dominantSpecies: '',
@@ -584,101 +602,127 @@ const formRules = {
   dominantSpecies: [{ required: true, message: '请选择优势树种', trigger: 'change' }],
   origin: [{ required: true, message: '请选择起源类型', trigger: 'change' }],
   areaHa: [{ required: true, message: '请输入面积', trigger: 'blur' }],
-  volumePerHa: [{ required: true, message: '请输入每公顷蓄积', trigger: 'blur' }]
+  volumePerHa: [{ required: true, message: '请输入每公顷蓄积', trigger: 'blur' }],
+  zoneId: [{ required: true, message: '请输入分区ID', trigger: 'blur' }]
 }
 
-watch(() => props.editData, (newVal) => {
-  if (newVal?.standId) {
+// ==============================================
+//赋值所有字段（立地等级 + 地形 + 调查 + 坐标 + 备注）
+// ==============================================
+watch(() => props.editData, (newVal, oldVal) => {
+  console.log('=== 调试信息 ===')
+  console.log('newVal:', newVal)
+  console.log('oldVal:', oldVal)
+  console.log('newVal?.standId:', newVal?.standId)
+
+  // 明确判断：只有当有有效的 standId 时才加载编辑数据
+  if (newVal && newVal.standId) {
+    // 编辑模式：加载数据
+    let compositionData = []
+    if (newVal.speciesComposition) {
+      if (Array.isArray(newVal.speciesComposition)) {
+        compositionData = newVal.speciesComposition
+      } else if (typeof newVal.speciesComposition === 'string') {
+        try {
+          compositionData = JSON.parse(newVal.speciesComposition)
+        } catch (e) {
+          console.warn('树种组成解析失败:', e)
+          compositionData = []
+        }
+      }
+    }
+
     formData.value = {
+      ...defaultForm,
+      zoneId: newVal.zoneId || 66,
       standId: newVal.standId,
       xiaoBanCode: newVal.xiaoBanCode || '',
       standName: newVal.standName || '',
       dominantSpecies: newVal.dominantSpecies || '',
       origin: newVal.origin || '天然',
-      areaHa: newVal.areaHa ? Number(newVal.areaHa) : undefined,
-      volumePerHa: newVal.volumePerHa ? Number(newVal.volumePerHa) : undefined,
-      standAge: newVal.standAge ? Number(newVal.standAge) : undefined,
-      canopyDensity: newVal.canopyDensity ? Number(newVal.canopyDensity) : 0.7,
-      siteClass: newVal.siteClass ? Number(newVal.siteClass) : 3,
-      avgDbh: newVal.avgDbh ? Number(newVal.avgDbh) : undefined,
-      avgHeight: newVal.avgHeight ? Number(newVal.avgHeight) : undefined,
-      elevation: newVal.elevation ? Number(newVal.elevation) : undefined,
-      slope: newVal.slope ? Number(newVal.slope) : undefined,
+      areaHa: newVal.areaHa !== null && newVal.areaHa !== undefined ? Number(newVal.areaHa) : undefined,
+      volumePerHa: newVal.volumePerHa !== null && newVal.volumePerHa !== undefined ? Number(newVal.volumePerHa) : undefined,
+      standAge: newVal.standAge !== null && newVal.standAge !== undefined ? Number(newVal.standAge) : undefined,
+      canopyDensity: newVal.canopyDensity !== null && newVal.canopyDensity !== undefined ? Number(newVal.canopyDensity) : 0.7,
+      siteClass: newVal.siteClass !== null && newVal.siteClass !== undefined ? Number(newVal.siteClass) : 3,
+      avgDbh: newVal.avgDbh !== null && newVal.avgDbh !== undefined ? Number(newVal.avgDbh) : undefined,
+      avgHeight: newVal.avgHeight !== null && newVal.avgHeight !== undefined ? Number(newVal.avgHeight) : undefined,
+      elevation: newVal.elevation !== null && newVal.elevation !== undefined ? Number(newVal.elevation) : undefined,
+      slope: newVal.slope !== null && newVal.slope !== undefined ? Number(newVal.slope) : undefined,
       aspect: newVal.aspect || '',
       siteType: newVal.siteType || '',
-      speciesComposition: Array.isArray(newVal.speciesComposition) ? newVal.speciesComposition : [],
+      speciesComposition: compositionData,
       surveyDate: newVal.surveyDate || '',
       surveyor: newVal.surveyor || '',
-      centerLon: newVal.centerLon ? Number(newVal.centerLon) : undefined,
-      centerLat: newVal.centerLat ? Number(newVal.centerLat) : undefined,
+      centerLon: newVal.centerLon !== null && newVal.centerLon !== undefined ? Number(newVal.centerLon) : undefined,
+      centerLat: newVal.centerLat !== null && newVal.centerLat !== undefined ? Number(newVal.centerLat) : undefined,
       remark: newVal.remark || ''
     }
-    // 编辑时展开所有已填写的部分
-    activeSections.value = ['area', 'feature', 'terrain', 'composition', 'survey', 'location', 'remark']
+    
+    console.log('编辑数据加载:', formData.value)
+    activeSections.value = ['area','feature','terrain','composition','survey','location','remark']
   } else {
+    // 新增模式：强制重置为默认值
+    console.log('新增模式：重置表单')
     formData.value = { ...defaultForm }
     activeSections.value = ['area', 'feature']
+    // 重置表单验证状态
+    formRef.value?.resetFields()
   }
-}, { immediate: true })
+}, { immediate: true, deep: true })
 
 const addCompositionItem = () => {
   formData.value.speciesComposition.push({ species: '', ratio: 0 })
 }
-
 const removeCompositionItem = (index) => {
   formData.value.speciesComposition.splice(index, 1)
 }
+const startMapSelection = () => { emit('start-map-selection') }
+const clearLocation = () => { formData.value.centerLon = undefined; formData.value.centerLat = undefined }
 
-const startMapSelection = () => {
-  emit('start-map-selection')
-  ElMessage.info('请在地图上点击选择位置')
-}
-
-const clearLocation = () => {
-  formData.value.centerLon = undefined
-  formData.value.centerLat = undefined
-}
-
-const handleSubmit = async () => {
-  try {
-    await formRef.value.validate()
-    submitting.value = true
-    
-    const submitData = {
-      ...formData.value,
-      totalVolume: totalVolume.value
+const handleSubmit = () => {
+  if (!formRef.value) return
+  formRef.value.validate(valid => {
+    if (valid) {
+      submitting.value = true
+      
+      const submitData = { 
+        ...formData.value, 
+        totalVolume: totalVolume.value,
+        speciesComposition: formData.value.speciesComposition && formData.value.speciesComposition.length > 0 
+          ? JSON.stringify(formData.value.speciesComposition) 
+          : null
+      }
+      
+      emit("submit", submitData, isEdit.value)
+      submitting.value = false
     }
-    
-    if (isEdit.value) {
-      submitData.standId = props.editData.standId
-    }
-    
-    emit('submit', submitData, isEdit.value)
-  } catch (error) {
-    ElMessage.warning('请检查表单填写是否正确')
-  } finally {
-    submitting.value = false
-  }
+  })
 }
 
-const handleDelete = () => {
-  emit('delete', props.editData)
+const handleDelete = () => { emit('delete', props.editData); visible.value = false }
+
+const handleCancel = () => { 
   visible.value = false
+  // 延迟重置，确保抽屉关闭后再清理数据
+  setTimeout(() => {
+    formData.value = { ...defaultForm }
+    activeSections.value = ['area', 'feature']
+    formRef.value?.resetFields()
+  }, 300)
 }
 
-const handleCancel = () => {
-  visible.value = false
-}
-
-const handleClosed = () => {
-  formRef.value?.resetFields()
+const handleClosed = () => { 
+  // 抽屉完全关闭后强制重置
+  formData.value = { ...defaultForm }
+  activeSections.value = ['area', 'feature']
   submitting.value = false
+  formRef.value?.clearValidate()
 }
 
 const setMapLocation = (lon, lat) => {
   formData.value.centerLon = Number(lon.toFixed(6))
   formData.value.centerLat = Number(lat.toFixed(6))
-  ElMessage.success(`已设置位置：${lon.toFixed(4)}, ${lat.toFixed(4)}`)
 }
 
 defineExpose({ setMapLocation })
@@ -918,4 +962,79 @@ defineExpose({ setMapLocation })
     font-size: 13px;
   }
 }
+
+
+/* 紧凑标签样式 - 减小标签字体 */
+.compact-label :deep(.el-form-item__label) {
+  font-size: 12px !important;
+  padding-right: 4px;
+}
+
+/* 宽输入框样式 - 修复按钮遮挡 */
+.wide-input :deep(.el-input-number) {
+  width: 100%;
+}
+
+.wide-input :deep(.el-input-number .el-input__inner) {
+  font-size: 13px;
+  padding-left: 4px;
+  padding-right: 28px;
+}
+
+/* 修复数字输入框按钮 */
+.wide-input :deep(.el-input-number .el-input-number__decrease),
+.wide-input :deep(.el-input-number .el-input-number__increase) {
+  width: 22px;
+}
+
+/* 总蓄积紧凑样式 */
+.compact-volume :deep(.el-form-item__label) {
+  font-size: 11px !important;
+}
+
+.compact-volume .total-volume-display {
+  padding: 2px 0;
+  white-space: nowrap;
+}
+
+.compact-volume .volume-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #D32F2F;
+}
+
+.compact-volume .volume-unit {
+  font-size: 11px;
+  color: #606266;
+  margin-left: 2px;
+}
+
+/* 郁闭度和立地等级字体减小 */
+:deep(.el-slider__marks-text) {
+  font-size: 11px;
+}
+
+:deep(.el-rate__text) {
+  font-size: 11px;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .compact-label :deep(.el-form-item__label) {
+    font-size: 12px !important;
+  }
+
+  .wide-input :deep(.el-input-number .el-input__inner) {
+    padding-right: 32px;
+  }
+
+  .compact-volume .volume-value {
+    font-size: 15px;
+  }
+
+  :deep(.el-slider__marks-text) {
+    font-size: 10px;
+  }
+}
+
 </style>

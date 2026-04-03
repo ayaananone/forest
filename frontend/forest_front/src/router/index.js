@@ -49,6 +49,13 @@ const routes = [
     meta: { requiresAuth: true, title: '林分详情' }
   },
 
+  {
+    path: '/3d-map',
+    name: '3DMap',
+    component: () => import('@/views/3DMapView.vue'),
+    meta: { title: '三维林分展示', requiresAuth: true }
+  },
+
 ]
 
 const router = createRouter({

@@ -121,35 +121,112 @@ defineExpose({
   min-height: 0;
 }
 
-@media (max-width: 1200px) {
+@media (max-width: 1200px) and (min-width: 769px) {
+  .chart-container {
+    padding: 16px;
+    height: auto; /* 关键：移除固定高度 */
+    min-height: auto;
+    overflow-y: auto; /* 允许滚动 */
+  }
+
+  .stats-row {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
   .charts-grid {
+    /* 关键：改为单列布局，固定每个图表高度 */
     grid-template-columns: 1fr;
-    grid-template-rows: repeat(3, 1fr);
-    height: auto;
-    min-height: 1200px;
+    grid-template-rows: none; /* 移除重复行定义 */
+    gap: 16px;
+    height: auto; /* 关键：不限制总高度 */
+    min-height: auto;
   }
 
   .chart-box {
+    /* 关键：每个图表固定高度，不拉伸 */
+    height: 350px;
     min-height: 350px;
+    max-height: 350px;
+    overflow: hidden;
+  }
+
+  .chart-content {
+    height: 100%;
+    min-height: auto;
   }
 }
 
+/* ==================== 移动端 (<768px) ==================== */
 @media (max-width: 768px) {
-  .stats-row {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
+  .chart-container {
+    padding: 12px;
+    min-width: auto;
+    height: auto;
+    min-height: auto;
   }
 
-  .chart-container {
-    width: 100%;
-    padding: 15px;
-    box-sizing: border-box;
+  .stats-row {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 10px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 8px;
+    margin-bottom: 16px;
+    height: auto;
+  }
+  
+  .stats-row::-webkit-scrollbar {
+    display: none;
+  }
+
+  .stats-row :deep(.stats-card) {
+    flex: 0 0 auto;
+    width: 140px;
+    min-width: 140px;
+    padding: 12px;
+  }
+
+  .charts-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    height: auto;
+    min-height: auto;
+  }
+
+  .chart-box {
+    min-height: auto;
+    height: auto;
+    padding: 12px;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  
+  .chart-content {
+    min-height: auto;
+    height: auto;
   }
 }
 
 @media (max-width: 480px) {
-  .stats-row {
-    grid-template-columns: 1fr;
+  .chart-container {
+    padding: 8px;
+  }
+
+  .chart-box {
+    padding: 10px;
+    border-radius: 8px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+  }
+  
+  .stats-row :deep(.stats-card) {
+    width: 120px;
+    min-width: 120px;
+    padding: 10px;
   }
 }
 </style>

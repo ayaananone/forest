@@ -3,7 +3,7 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.ceshi.forest.mapper.ForestStandMapper">
 
-    <!-- 结果映射 - 修复：明确指定所有字段映射 -->
+    <!-- 结果映射：明确指定所有字段映射 -->
     <resultMap id="BaseResultMap" type="com.ceshi.forest.entity.ForestStand">
         <id column="stand_id" property="standId"/>
         <result column="zone_id" property="zoneId"/>
@@ -35,6 +35,9 @@
         <result column="create_by" property="createBy"/>
         <result column="update_by" property="updateBy"/>
         <result column="deleted" property="deleted"/>
+        <result column="site_class" property="siteClass"/>
+        <result column="remark" property="remark"/>
+        <result column="species_composition" property="speciesComposition"/>
     </resultMap>
 
     <sql id="Base_Column_List">
@@ -43,41 +46,43 @@
         avg_height, avg_dbh, volume_per_ha, total_volume,
         dominant_species, species_composition, center_lon, center_lat,
         elevation, slope, aspect, survey_date, surveyor,
-        create_time, update_time, create_by, update_by, deleted
+        create_time, update_time, create_by, update_by, deleted,site_class, remark
     </sql>
 
     <!-- 查询所有 -->
     <select id="findAll" resultType="com.ceshi.forest.entity.ForestStand">
         SELECT
-            stand_id as standId,
-            zone_id as zoneId,
-            lin_ban as linBan,
-            xiao_ban as xiaoBan,
-            xiao_ban_code as xiaoBanCode,
-            stand_name as standName,
-            area_ha as areaHa,
-            site_type as siteType,
-            origin as origin,
-            stand_age as standAge,
-            canopy_density as canopyDensity,
-            avg_height as avgHeight,
-            avg_dbh as avgDbh,
-            volume_per_ha as volumePerHa,
-            total_volume as totalVolume,
-            dominant_species as dominantSpecies,
-            species_composition as speciesComposition,
-            center_lon as centerLon,
-            center_lat as centerLat,
-            elevation as elevation,
-            slope as slope,
-            aspect as aspect,
-            survey_date as surveyDate,
-            surveyor as surveyor,
-            create_time as createTime,
-            update_time as updateTime,
-            create_by as createBy,
-            update_by as updateBy,
-            deleted as deleted
+        stand_id as standId,
+        zone_id as zoneId,
+        lin_ban as linBan,
+        xiao_ban as xiaoBan,
+        xiao_ban_code as xiaoBanCode,
+        stand_name as standName,
+        area_ha as areaHa,
+        site_type as siteType,
+        origin as origin,
+        stand_age as standAge,
+        canopy_density as canopyDensity,
+        avg_height as avgHeight,
+        avg_dbh as avgDbh,
+        volume_per_ha as volumePerHa,
+        total_volume as totalVolume,
+        dominant_species as dominantSpecies,
+        species_composition as speciesComposition,
+        center_lon as centerLon,
+        center_lat as centerLat,
+        elevation as elevation,
+        slope as slope,
+        aspect as aspect,
+        survey_date as surveyDate,
+        surveyor as surveyor,
+        create_time as createTime,
+        update_time as updateTime,
+        create_by as createBy,
+        update_by as updateBy,
+        deleted as deleted,
+        site_class as siteClass,
+        remark as remark
         FROM forest_stand
         WHERE deleted = 0
         ORDER BY stand_id
@@ -183,14 +188,14 @@
             avg_height, avg_dbh, volume_per_ha, total_volume,
             dominant_species, species_composition, center_lon, center_lat,
             elevation, slope, aspect, survey_date, surveyor,
-            create_time, update_time, create_by, update_by, deleted
+            create_time, update_time, create_by, update_by, deleted,site_class, remark
         ) VALUES (
                      #{zoneId}, #{linBan}, #{xiaoBan}, #{xiaoBanCode}, #{standName},
                      #{areaHa}, #{siteType}, #{origin}, #{standAge}, #{canopyDensity},
                      #{avgHeight}, #{avgDbh}, #{volumePerHa}, #{totalVolume},
                      #{dominantSpecies}, #{speciesComposition}, #{centerLon}, #{centerLat},
                      #{elevation}, #{slope}, #{aspect}, #{surveyDate}, #{surveyor},
-                     NOW(), NOW(), #{createBy}, #{updateBy}, 0
+                     NOW(), NOW(), #{createBy}, #{updateBy}, 0, #{siteClass}, #{remark}
                  )
     </insert>
 
@@ -212,7 +217,7 @@
             volume_per_ha = #{volumePerHa},
             total_volume = #{totalVolume},
             dominant_species = #{dominantSpecies},
-            species_composition = #{speciesComposition},
+            species_composition = #{speciesComposition}::jsonb,
             center_lon = #{centerLon},
             center_lat = #{centerLat},
             elevation = #{elevation},
@@ -222,7 +227,13 @@
             surveyor = #{surveyor},
             update_time = NOW(),
             update_by = #{updateBy},
-            deleted = #{deleted}
+            deleted = CASE WHEN #{deleted} = true THEN 1 ELSE 0 END,
+            site_class = #{siteClass},
+            remark = #{remark},
+            geom = CASE WHEN #{centerLon} IS NOT NULL AND #{centerLat} IS NOT NULL
+                            THEN ST_SetSRID(ST_MakePoint(#{centerLon}, #{centerLat}), 4326)
+                        ELSE NULL
+                END
         WHERE stand_id = #{standId}
     </update>
 

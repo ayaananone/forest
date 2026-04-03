@@ -30,7 +30,7 @@ export function calculateVolumeRanges(stands) {
     const ranges = [0, 0, 0, 0, 0]
 
     stands.forEach(stand => {
-        const volume = stand.volumePerHa || 0
+        const volume = stand.avgVolumePerHa || 0
         if (volume < 50) ranges[0]++
         else if (volume < 100) ranges[1]++
         else if (volume < 150) ranges[2]++
@@ -48,8 +48,8 @@ export function calculateVolumeRanges(stands) {
  */
 export function calculateStats(stands) {
     const totalStands = stands.length
-    const totalArea = stands.reduce((sum, s) => sum + (s.area || 0), 0)
-    const totalVolume = stands.reduce((sum, s) => sum + ((s.volumePerHa || 0) * (s.area || 0)), 0)
+    const totalArea = stands.reduce((sum, s) => sum + (s.totalArea || 0), 0)
+    const totalVolume = stands.reduce((sum, s) => sum + ((s.avgVolumePerHa || 0) * (s.totalArea || 0)), 0)
     const avgVolume = totalArea > 0 ? totalVolume / totalArea : 0
 
     return {
@@ -68,12 +68,12 @@ export function calculateStats(stands) {
 export function calculateSpeciesStats(stands) {
     const stats = {}
     stands.forEach(stand => {
-        const species = stand.dominantSpecies || '未知'
+        const species = stand.species || '未知'
         if (!stats[species]) {
             stats[species] = { species, count: 0, totalArea: 0, totalVolume: 0 }
         }
         stats[species].count++
-        stats[species].totalArea += (stand.area || 0)
+        stats[species].totalArea += (stand.totalArea || 0)
         stats[species].totalVolume += (stand.volumePerHa || 0) * (stand.area || 0)
     })
     return Object.values(stats)
@@ -134,7 +134,7 @@ export function calculateAgeDistribution(stands) {
  * @returns {Array} 逐年蓄积量
  */
 export function calculateGrowthTrend(stands, years = 5) {
-    const avgVolume = stands.reduce((sum, s) => sum + (s.volumePerHa || 0), 0) / (stands.length || 1)
+    const avgVolume = stands.reduce((sum, s) => sum + (s.totalVolume || 0), 0) / (stands.length || 1)
     const growthRate = 0.05 // 假设年增长率5%
 
     const trend = []

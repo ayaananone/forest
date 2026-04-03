@@ -173,7 +173,7 @@ import MapPopup from '@/components/map/MapPopup.vue'
 import RadiusQuery from '@/components/map/RadiusQuery.vue'
 import StandEditDrawer from '@/components/stand/StandEditDrawer.vue'
 import { useMap } from '@/composables/useMap'
-import { fetchStands, createStand, updateStand, deleteStand } from '@/api/forest'
+import { fetchStands, createStand, updateStand, deleteStand,fetchStandDetail } from '@/api/forest'
 
 const props = defineProps({
   targetId: {
@@ -294,7 +294,6 @@ onUnmounted(() => {
   destroyMap()
 })
 
-// 其他方法保持不变...
 const loadInitialData = async () => {
   try {
     const stands = await fetchStands()
@@ -351,8 +350,8 @@ const showStandPopup = (stand, coordinate) => {
     area: stand.areaHa || 0,
     volumePerHa: stand.volumePerHa || 0,
     totalVolume: ((stand.volumePerHa || 0) * (stand.areaHa || 0)).toFixed(2),
-    age: stand.standAge || '-',
-    density: stand.canopyDensity || '-',
+    age: stand.standAge,
+    density: stand.canopyDensity,
     _raw: stand
   }
   
@@ -428,9 +427,35 @@ const openCreateDrawer = () => {
   drawerVisible.value = true
 }
 
-const openEditDrawer = (stand) => {
-  currentEditStand.value = { ...stand }
-  drawerVisible.value = true
+const openEditDrawer = async (stand) => {
+    const standId = stand.standId || stand.id
+    
+    // 先关闭抽屉（如果之前打开过）
+    drawerVisible.value = false
+    
+    if (standId) {
+        try {
+            console.log('正在获取详情，standId:', standId)
+            const detail = await fetchStandDetail(standId)
+            console.log('获取到的详情:', detail)
+            
+            currentEditStand.value = { ...detail }  // 使用展开运算符创建新对象
+            console.log('currentEditStand 已设置:', currentEditStand.value)
+            
+            // 延迟打开抽屉，确保 Vue 响应式更新
+            setTimeout(() => {
+                drawerVisible.value = true
+            }, 0)
+            
+        } catch (err) {
+            console.error('获取详情失败，使用现有数据:', err)
+            currentEditStand.value = { ...stand }
+            drawerVisible.value = true
+        }
+    } else {
+        currentEditStand.value = { ...stand }
+        drawerVisible.value = true
+    }
 }
 
 const handleSaveStand = async (formData, isEdit) => {

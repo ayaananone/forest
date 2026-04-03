@@ -124,56 +124,109 @@ onUnmounted(() => {
   height: 100% !important;
 }
 
-/* 移动端适配 */
-@media screen and (max-width: 768px) {
+/* ==================== 平板/小屏桌面端 (768~1200px) ==================== */
+@media (max-width: 1200px) and (min-width: 769px) {
   .volume-chart {
-    min-height: 240px;
-    padding: 8px;
+    height: 100%; /* 填满父容器350px */
+    min-height: 100%;
+    max-height: 100%;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
   }
-  
+
   .chart-header {
     margin-bottom: 12px;
+    flex-shrink: 0;
   }
-  
-  .stat-info {
-    font-size: 12px;
-    gap: 4px;
-  }
-  
-  .stat-info .value {
-    font-size: 14px;
-  }
-  
-  .stat-info .count {
-    font-size: 11px;
-  }
-  
+
   .chart-wrapper {
-    min-height: 160px;
+    flex: 1; /* 占据剩余空间 */
+    position: relative;
+    min-height: 0; /* 关键：允许收缩 */
+    height: auto;
+    width: 100%;
+  }
+
+  canvas {
+    width: 100% !important;
+    height: 100% !important;
   }
 }
 
-/* 小屏手机适配 */
-@media screen and (max-width: 480px) {
+/* ==================== 移动端 (<768px) ==================== */
+@media (max-width: 768px) {
   .volume-chart {
-    min-height: 220px;
-    padding: 6px;
+    padding: 10px;
+    height: 300px;
+    min-height: 300px;
+    max-height: 300px;
+    display: flex;
+    flex-direction: column;
   }
-  
+
+  .chart-header {
+    margin-bottom: 12px;
+    flex-shrink: 0;
+  }
+
+  .stat-info {
+    font-size: 12px;
+  }
+
+  .stat-info .value {
+    font-size: 14px;
+  }
+
   .chart-wrapper {
-    min-height: 140px;
+    flex: 0 0 220px;
+    height: 220px;
+    min-height: 220px;
+    max-height: 220px;
+    position: relative;
   }
   
+  .chart-wrapper :deep(.el-empty) {
+    height: 100%;
+    padding: 20px;
+  }
+
+  canvas {
+    width: 100% !important;
+    height: 100% !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .volume-chart {
+    height: 260px;
+    min-height: 260px;
+    max-height: 260px;
+    padding: 8px;
+  }
+
+  .chart-header {
+    margin-bottom: 10px;
+  }
+
   .stat-info .label,
   .stat-info .count {
     display: none;
   }
-  
-  .stat-info .value {
-    font-size: 13px;
+
+  .stat-info::before {
+    content: '最多: ';
+    color: #666;
+    font-size: 12px;
+  }
+
+  .chart-wrapper {
+    flex: 0 0 180px;
+    height: 180px;
+    min-height: 180px;
+    max-height: 180px;
   }
 }
-
 /* 大屏优化 */
 @media screen and (min-width: 1400px) {
   .volume-chart {
