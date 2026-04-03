@@ -20,11 +20,11 @@
         <el-descriptions :column="1" size="small" border>
           <!-- 使用 standId 作为主键显示 -->
           <el-descriptions-item label="林分ID">
-            <span class="highlight-value">{{ content?.standId || '-' }}</span>
+            <span class="highlight-value">{{ content?.standId || content?.id|| '-' }}</span>
           </el-descriptions-item>
           
           <el-descriptions-item label="小班号">
-            {{ content?.xiaoBanCode || content?.standNo || content?.xiao_ban_code || '-' }}
+            {{ content?.standNo || content?.xiaoBanCode || '-' }}
           </el-descriptions-item>
           
           <el-descriptions-item label="优势树种">

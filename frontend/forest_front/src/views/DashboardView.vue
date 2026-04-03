@@ -153,7 +153,7 @@ const mapRef = ref(null)
 const leftCollapsed = ref(false)
 const rightCollapsed = ref(false)
 const searchKeyword = ref('')
-const currentYear = ref(2024)
+const currentYear = ref(2026)
 const loading = ref(false)
 
 const stands = ref([])

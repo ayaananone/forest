@@ -531,4 +531,293 @@ canvas {
   width: 100% !important;
   height: 100% !important;
 }
+
+@media (max-width: 768px) {
+  .mobile-stats-panel {
+    background: #fff;
+  }
+
+  /* 统计卡片增强 */
+  .stat-card-mini {
+    flex: 0 0 auto;
+    width: 150px;
+    padding: 14px;
+    border-radius: 12px;
+    border-left: 4px solid;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    transition: transform 0.2s;
+  }
+  
+  .stat-card-mini:active {
+    transform: scale(0.98);
+  }
+
+  .stat-icon-mini {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+  }
+
+  .stat-value-mini {
+    font-size: 20px;
+    font-weight: 700;
+  }
+
+  .stat-title-mini {
+    font-size: 12px;
+    color: #666;
+    margin-top: 4px;
+  }
+
+  /* 标签页优化 */
+  .tab-header {
+    position: sticky;
+    top: 0;
+    background: #fff;
+    z-index: 10;
+    padding: 0 16px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  }
+
+  .tab-btn {
+    padding: 16px 12px;
+    font-size: 15px;
+    font-weight: 500;
+    position: relative;
+  }
+
+  .tab-btn.active {
+    color: #2E7D32;
+  }
+
+  .tab-btn.active::after {
+    left: 10%;
+    right: 10%;
+    height: 3px;
+    border-radius: 3px;
+  }
+
+  /* 内容区域 */
+  .tab-content {
+    padding: 16px;
+    padding-bottom: 80px; /* 底部安全距离 */
+  }
+
+  /* 树种列表优化 */
+  .species-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .species-item {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 12px;
+  }
+
+  .species-bar-wrapper {
+    gap: 8px;
+  }
+
+  .species-label {
+    font-size: 14px;
+    margin-bottom: 8px;
+  }
+
+  .species-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+  }
+
+  .species-count {
+    font-size: 13px;
+    color: #666;
+    margin-left: auto;
+  }
+
+  .species-bar-bg {
+    height: 10px;
+    background: #e9ecef;
+    border-radius: 5px;
+    overflow: hidden;
+  }
+
+  .species-bar-fill {
+    border-radius: 5px;
+    transition: width 0.6s ease;
+  }
+
+  .species-percent {
+    font-size: 12px;
+    color: #2E7D32;
+    font-weight: 600;
+    text-align: right;
+    margin-top: 4px;
+  }
+
+  /* 蓄积列表优化 */
+  .volume-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .volume-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 8px;
+  }
+
+  .volume-range {
+    font-size: 13px;
+    color: #666;
+    width: 70px;
+    flex-shrink: 0;
+  }
+
+  .volume-bar-wrapper {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .volume-bar-bg {
+    flex: 1;
+    height: 8px;
+    background: #e9ecef;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .volume-bar-fill {
+    background: linear-gradient(90deg, #2E7D32, #4CAF50);
+    border-radius: 4px;
+    transition: width 0.6s ease;
+  }
+
+  .volume-count {
+    font-size: 12px;
+    color: #2E7D32;
+    font-weight: 600;
+    min-width: 40px;
+    text-align: right;
+  }
+
+  /* 趋势页优化 */
+  .trend-summary {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .trend-metric {
+    background: linear-gradient(135deg, #f0f7f0 0%, #e8f5e9 100%);
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+    border: 1px solid #c8e6c9;
+  }
+
+  .metric-label {
+    font-size: 12px;
+    color: #666;
+    display: block;
+    margin-bottom: 6px;
+  }
+
+  .metric-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: #2E7D32;
+  }
+
+  .metric-value.up {
+    color: #4CAF50;
+  }
+
+  .metric-value.down {
+    color: #f44336;
+  }
+
+  .trend-chart-wrapper {
+    background: #fff;
+    border-radius: 12px;
+    padding: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    height: 240px;
+  }
+}
+
+@media (max-width: 480px) {
+  .stats-scroll-container {
+    padding: 10px;
+  }
+
+  .stat-card-mini {
+    width: 130px;
+    padding: 12px;
+  }
+
+  .stat-value-mini {
+    font-size: 18px;
+  }
+
+  .tab-btn {
+    padding: 14px 8px;
+    font-size: 14px;
+  }
+
+  .trend-chart-wrapper {
+    height: 200px;
+  }
+
+  .metric-value {
+    font-size: 20px;
+  }
+}
+
+/* 横屏模式优化 */
+@media (max-width: 768px) and (orientation: landscape) {
+  .charts-tabs {
+    display: flex;
+    flex-direction: row;
+  }
+
+  .tab-header {
+    flex-direction: column;
+    width: 100px;
+    border-right: 1px solid #e8e8e8;
+    border-bottom: none;
+  }
+
+  .tab-btn {
+    padding: 12px 8px;
+    border-bottom: none;
+    border-left: 3px solid transparent;
+  }
+
+  .tab-btn.active::after {
+    display: none;
+  }
+
+  .tab-btn.active {
+    border-left-color: #2E7D32;
+    background: #f0f7f0;
+  }
+
+  .tab-content {
+    flex: 1;
+  }
+  
+  .trend-chart-wrapper {
+    height: 200px;
+  }
+}
 </style>

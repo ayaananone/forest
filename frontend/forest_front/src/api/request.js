@@ -1,4 +1,4 @@
-// src/api/request.js - Spring Boot 4.x JWT适配版
+// src/api/request.js
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import { 

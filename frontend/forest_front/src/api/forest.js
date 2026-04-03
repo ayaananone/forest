@@ -25,6 +25,7 @@ function transformStand(backendData) {
     
     return {
         standId: backendData.standId,
+        zoneId: backendData.zoneId,
         standNo: backendData.xiaoBanCode,
         standName: backendData.standName || '',
         xiaoBanCode: backendData.xiaoBanCode,
@@ -186,6 +187,7 @@ export async function createStand(standData) {
     try {
         const submitData = {
             xiaoBanCode: standData.xiaoBanCode,
+            zoneId:standData.zoneId,
             standName: standData.standName,
             dominantSpecies: standData.dominantSpecies,
             origin: standData.origin,
@@ -229,6 +231,7 @@ export async function updateStand(standId, standData) {
         
         const submitData = {
             xiaoBanCode: standData.xiaoBanCode,
+            zoneId :standData.zoneId,
             standName: standData.standName,
             dominantSpecies: standData.dominantSpecies,
             origin: standData.origin,
@@ -487,5 +490,5 @@ export function formatArea(area) {
 export { 
     transformStand, 
     transformStands,
-    transformSpeciesStats 
+    transformSpeciesStats
 }

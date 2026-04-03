@@ -154,20 +154,147 @@ canvas {
   margin-left: 4px;
 }
 
-@media (max-width: 400px) {
+@media (max-width: 1200px) and (min-width: 769px) {
+  .species-chart {
+    height: 100%; /* 填满父容器 */
+    display: flex;
+    flex-direction: column;
+  }
+
+  .chart-header {
+    margin-bottom: 10px;
+    flex-shrink: 0;
+  }
+
+  .chart-body {
+    flex: 1;
+    display: flex;
+    gap: 16px;
+    min-height: 0; /* 关键：允许收缩 */
+    max-height: calc(100% - 50px); /* 减去头部高度 */
+  }
+
+  .chart-wrapper {
+    flex: 1;
+    position: relative;
+    min-width: 0;
+    max-width: 60%;
+    height: 100%; /* 填满可用空间 */
+  }
+
+  canvas {
+    width: 100% !important;
+    height: 100% !important;
+    max-height: 100%;
+  }
+
+  .legend-wrapper {
+    width: 40%;
+    max-width: 150px;
+    overflow-y: auto;
+    padding-left: 8px;
+    height: 100%; /* 填满高度 */
+  }
+}
+
+/* ==================== 移动端 (<768px) ==================== */
+@media (max-width: 768px) {
+  .species-chart {
+    padding: 8px;
+    height: auto; /* 不限制高度 */
+  }
+
+  .chart-header {
+    margin-bottom: 10px;
+  }
+
+  .title {
+    font-size: 15px;
+  }
+
   .chart-body {
     flex-direction: column;
+    gap: 12px;
+    max-height: 400px; /* 限制最大高度 */
+    height: auto;
   }
 
   .chart-wrapper {
     max-width: 100%;
-    height: 60%;
+    aspect-ratio: 1 / 1;
+    height: auto;
+    max-height: 280px;
+    min-height: auto;
+    margin: 0 auto;
+  }
+
+  canvas {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: contain;
   }
 
   .legend-wrapper {
     width: 100%;
     max-width: none;
-    height: 40%;
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 12px;
+    overflow-x: auto;
+    padding: 8px 0;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    max-height: 80px;
+    height: auto;
+  }
+  
+  .legend-wrapper::-webkit-scrollbar {
+    display: none;
+  }
+
+  .legend-item {
+    flex: 0 0 auto;
+    padding: 6px 10px;
+    background: #f5f7fa;
+    border-radius: 16px;
+    border-bottom: none;
+    white-space: nowrap;
+  }
+
+  .legend-color {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 6px;
+  }
+
+  .legend-name {
+    font-size: 12px;
+  }
+
+  .legend-value {
+    font-size: 11px;
+    color: #909399;
+    margin-left: 4px;
+  }
+}
+
+@media (max-width: 480px) {
+  .chart-body {
+    max-height: 350px;
+  }
+  
+  .chart-wrapper {
+    max-height: 220px;
+  }
+  
+  .legend-wrapper {
+    max-height: 70px;
+  }
+  
+  .legend-item {
+    padding: 4px 8px;
+    font-size: 11px;
   }
 }
 </style>
