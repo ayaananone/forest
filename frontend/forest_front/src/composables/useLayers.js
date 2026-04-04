@@ -2,11 +2,11 @@
  * 图层管理组合式函数 
  */
 import { ref } from 'vue'
-import { Tile as TileLayer, Vector as VectorLayer, Heatmap as HeatmapLayer } from 'ol/layer'
+import { Tile as TileLayer, Vector as VectorLayer, Heatmap as HeatmapLayer} from 'ol/layer'
 import { XYZ, TileWMS, Vector as VectorSource } from 'ol/source'
 import { GeoJSON } from 'ol/format'
 import { fromLonLat } from 'ol/proj'
-import { Style, Stroke, Fill, Text, Circle as CircleStyle } from 'ol/style'
+import { Style, Stroke, Fill, Circle as CircleStyle } from 'ol/style'
 import Feature from 'ol/Feature'
 import Point from 'ol/geom/Point'
 import Circle from 'ol/geom/Circle'
@@ -108,47 +108,42 @@ export function useLayers(map) {
     /**
      * 创建林分矢量标记图层（WMS 失败时的备选）
      */
-    const createStandsMarkerLayer = () => {
-        const source = new VectorSource()
+  const createStandsMarkerLayer = () => {
+    const source = new VectorSource()
+    
+    // 样式缓存池：保证万级拖动丝滑
+    const styleCache = {}
+
+    return new VectorLayer({
+      source: source,
+      name: 'stands_markers',
+      visible: true,
+      renderMode: 'vector',
+      style: (feature) => {
+        const volume = feature.get('volume_per_ha') || 0
+        const species = feature.get('dominant_species') || '未知'
+        const color = SPECIES_COLORS[species] || '#2E7D32'
         
-        return new VectorLayer({
-            source: source,
-            name: 'stands_markers',
-            visible: true,
-            style: (feature) => {
-                const volume = feature.get('volume_per_ha') || 0
-                const species = feature.get('dominant_species') || '未知'
-                const color = SPECIES_COLORS[species] || '#2E7D32'
-                
-                // 根据蓄积量调整大小
-                const radius = Math.max(8, Math.min(20, volume / 15))
-                
-                return new Style({
-                    image: new CircleStyle({
-                        radius: radius,
-                        fill: new Fill({
-                            color: hexToRgba(color, 0.8)
-                        }),
-                        stroke: new Stroke({
-                            color: '#fff',
-                            width: 2
-                        })
-                    }),
-                    text: new Text({
-                        text: feature.get('stand_name') || feature.get('xiao_ban_code') || '',
-                        font: 'bold 11px sans-serif',
-                        fill: new Fill({ color: '#000' }),
-                        stroke: new Stroke({
-                            color: '#fff',
-                            width: 3
-                        }),
-                        offsetY: -radius - 8
-                    })
-                })
-            },
-            zIndex: 12
-        })
-    }
+        let radius = 5
+        if (volume > 150) radius = 7
+        else if (volume > 80) radius = 6
+        
+        const key = `${color}-${radius}`
+        if (!styleCache[key]) {
+          styleCache[key] = new Style({
+            image: new CircleStyle({
+              radius: radius,
+              fill: new Fill({ color: hexToRgba(color, 0.85) }),
+              stroke: new Stroke({ color: 'rgba(255,255,255,0.9)', width: 1.2 })
+            })
+          })
+        }
+        return styleCache[key]
+      },
+      zIndex: 12
+    })
+  }
+
 
     /**
      * 创建林分边界矢量图层（用于高亮和详细信息）

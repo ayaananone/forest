@@ -255,6 +255,7 @@ export function useMap(targetId, options = {}) {
         }
 
         const props = feature.getProperties()
+        console.log('【调试】原始属性:', JSON.stringify(props, null, 2))
 
         // 健壮的属性获取函数 - 检查多种可能的来源
         const getProp = (...names) => {
@@ -422,9 +423,15 @@ export function useMap(targetId, options = {}) {
         }
     }
 
+    let isPointerMoving = false
     const handlePointerMove = (evt) => {
-        if (!map.value) return
-        const pixel = map.value.getEventPixel(evt.originalEvent)
+      if (!map.value) return
+      
+      if (isPointerMoving) return
+      isPointerMoving = true
+      setTimeout(() => { isPointerMoving = false }, 50)
+
+    const pixel = map.value.getEventPixel(evt.originalEvent)
         
         // 检测是否悬停在矢量要素上
         const hit = map.value.hasFeatureAtPixel(pixel, {
