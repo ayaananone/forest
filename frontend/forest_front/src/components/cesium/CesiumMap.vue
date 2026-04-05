@@ -70,7 +70,7 @@ const getSpeciesColor = (species) => SPECIES_COLORS[species] || '#757575'
 
 onMounted(async () => {
   try {
-    Cesium.Ion.defaultAccessToken = '你的token' //记得在cesium获取你的免费token！然后替换！
+    Cesium.Ion.defaultAccessToken = '你的实际token' //每次更新都得删一次好烦
     if (!cesiumContainer.value) throw new Error('找不到 DOM 容器')
 
     viewer = new Cesium.Viewer(cesiumContainer.value, {

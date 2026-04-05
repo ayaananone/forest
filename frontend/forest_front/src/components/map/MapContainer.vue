@@ -1,10 +1,8 @@
 <template>
   <div class="map-wrapper">
     <div :id="targetId" class="map-container"></div>
-
-    <div v-if="!is3DMode" :id="targetId" class="map-container"></div>
-    
-    <CesiumMap v-else @back-to-2d="handleBackTo2D" />
+  
+    <CesiumMap v-show="is3DMode" @back-to-2d="handleBackTo2D" />
 
     <LoadingMask :visible="!isInitialized && !is3DMode" text="地图加载中..." :z-index="1000" />
     
@@ -185,33 +183,43 @@ import StandEditDrawer from '@/components/stand/StandEditDrawer.vue'
 import { useMap } from '@/composables/useMap'
 import { fetchStands, createStand, updateStand, deleteStand,fetchStandDetail } from '@/api/forest'
 import CesiumMap from '@/components/cesium/CesiumMap.vue'
+import coordtransform from 'coordtransform'
 const is3DMode = ref(false)
 
 // ==================== 3D 转 2D 并定位 ====================
 const handleBackTo2D = async (targetData) => {
-  is3DMode.value = false // 切回 2D
+  is3DMode.value = false // 隐藏 Cesium 面具
+  
+  await nextTick() // 等待 DOM 更新
 
-  // 如果有携带坐标数据，进行定位和弹窗
+  // 🌟 唤醒底层 2D 地图，强制让它重新计算画布大小
+  if (map.value) {
+    map.value.updateSize()
+  }
+
   if (targetData && targetData.lon && targetData.lat) {
-    // 必须等待 2D 地图的 DOM 完全渲染出来再操作
-    await nextTick()
-    
+    // 🌟 坐标纠偏，对齐高德底图
+    const gcjCoord = coordtransform.wgs84togcj02(
+      parseFloat(targetData.lon), 
+      parseFloat(targetData.lat)
+    )
+
     // 1. 飞行定位
     if (view.value) {
       view.value.animate({
-        center: fromLonLat([targetData.lon, targetData.lat]),
-        zoom: 16, // 飞到一个合适的层级看清林分
+        center: fromLonLat(gcjCoord), 
+        zoom: 16,
         duration: 1000
       })
     }
 
-    // 2. 高亮该林分
+    // 2. 高亮
     if (targetData.standId) {
       highlightStandById(targetData.standId)
     }
 
-    // 3. 弹出 2D 详情窗口 (复用你原有的 showStandPopup 逻辑)
-    const coordinate = fromLonLat([targetData.lon, targetData.lat])
+    // 3. 弹窗
+    const coordinate = fromLonLat(gcjCoord)
     const data = {
       type: 'stand_detail',
       standId: targetData.standId,
@@ -224,7 +232,7 @@ const handleBackTo2D = async (targetData) => {
       totalVolume: ((targetData.volumePerHa || 0) * (targetData.areaHa || 0)).toFixed(2),
       age: targetData.standAge,
       density: targetData.canopyDensity,
-      _raw: targetData // 把原始数据存着，以防点击编辑
+      _raw: targetData
     }
     showPopup(data, coordinate)
   }
