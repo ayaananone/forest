@@ -16,11 +16,6 @@
 本项目是一个面向林业管理的综合GIS平台，采用前后端分离架构，集成了 2D/3D 地图可视化、空间查询、数据统计分析等核心功能。系统不仅支持 PC 端的复杂交互分析，还针对移动端进行了深度适配；同时创新性地引入了三维地球引擎，实现林地数据的立体化展示与空间量算。
 
 ## 📸 功能展示
-
-### 主界面
-![主界面](docs/images/main-interface.png)
-*智慧林场综合管理平台主界面，左侧统计面板，右侧地图展示*
-
 ### 🎬 最新演示 (3D地图)
 
 ### 🌐 三维场景与空间分析
@@ -329,6 +324,19 @@ java -jar build/libs/forest-*.jar
        username: your_username
        password: your_password
 ```
+**半径范围查询**
+![半径查询](docs/images/radius-query.png)
+
+**树种与起源筛选**
+![筛选功能](docs/images/species-filter.png)
+
+### 后端运行
+
+**项目结构**
+![后端结构](docs/images/backend-structure.png)
+
+**启动成功**
+![后端运行](docs/images/backend-running.png)
 ---
 ## 💡 技术亮点
 
