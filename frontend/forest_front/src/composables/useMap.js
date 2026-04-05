@@ -255,7 +255,6 @@ export function useMap(targetId, options = {}) {
         }
 
         const props = feature.getProperties()
-        console.log('【调试】原始属性:', JSON.stringify(props, null, 2))
 
         // 健壮的属性获取函数 - 检查多种可能的来源
         const getProp = (...names) => {

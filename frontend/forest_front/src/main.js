@@ -1,4 +1,3 @@
-// /src/main.js - 应用入口
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import App from './App.vue'
@@ -15,10 +14,6 @@ import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 // 权限指令
 import { setupPermission } from '@/directives/permission'
 
-/*import * as Cesium from 'cesium'
-
-Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI2NWZjYzgzNi1kZDkwLTRhZmEtYWM1NS0zMzc2N2Y2YWVjZDEiLCJpZCI6NDEzMjI4LCJpYXQiOjE3NzUyMDEwMDd9.bieYe4Lmk0kYT07iZUwzuPT7kJ5bAnuSWB9bNwMlrB8'
-*/
 const app = createApp(App)
 const pinia = createPinia()
 
