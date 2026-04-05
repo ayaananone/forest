@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
-import cesium from 'vite-plugin-cesium'  // 新增：Cesium 插件
+import cesium from 'vite-plugin-cesium'
 import path from 'path'
 import { fileURLToPath } from 'url'
 
@@ -11,16 +11,14 @@ export default defineConfig({
   plugins: [
     vue(),
     cesium({
-      rebuildCesium: false,  // 使用预构建版本，加快开发启动速度
-      devMinifyCesium: false // 开发环境不压缩，方便调试
+      rebuildCesium: false,
+      devMinifyCesium: false 
     })
   ],
-  
+
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      // Cesium 路径别名（可选，vite-plugin-cesium 已自动处理）
-      // 'cesium': path.resolve(__dirname, 'node_modules/cesium/Source')
     },
   },
   
@@ -61,11 +59,8 @@ export default defineConfig({
       '/geoserver': {
         target: 'http://localhost:8080',
         changeOrigin: true,
-        // 如果需要，可以添加路径重写（根据你的 GeoServer 实际路径调整）
-        // rewrite: (path) => path.replace(/^\/geoserver/, '/geoserver')
       },
       
-      // 【可选】Cesium Ion 服务代理（如果你使用 Cesium Ion 的影像或地形服务）
       '/cesium-ion': {
         target: 'https://api.cesium.com',
         changeOrigin: true,
@@ -79,12 +74,10 @@ export default defineConfig({
   
   // 构建优化配置
   build: {
-    // 提高警告限制，Cesium 体积较大
     chunkSizeWarningLimit: 4000, // 4MB
     
     rollupOptions: {
       output: {
-        // 手动分块，将 Cesium 单独打包
         manualChunks(id) {
           if (id.includes('node_modules/cesium')) {
             return 'cesium'
@@ -104,6 +97,9 @@ export default defineConfig({
   
   // 优化依赖预构建
   optimizeDeps: {
-    exclude: ['cesium'] // Cesium 体积大，不预构建，使用插件处理
+      include: [
+      'cesium',
+      'mersenne-twister'
+    ]
   }
 })

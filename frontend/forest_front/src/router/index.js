@@ -56,6 +56,13 @@ const routes = [
     meta: { title: '三维林分展示', requiresAuth: true }
   },
 
+  { 
+    path: '/3d-map', 
+    name: '3DMap', 
+    component: () => import('@/components/cesium/CesiumMap.vue'), 
+    meta: { title: '三维林分展示', requiresAuth: true } 
+  },
+
 ]
 
 const router = createRouter({

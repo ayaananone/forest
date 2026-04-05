@@ -1,6 +1,14 @@
 <template>
   <div class="map-wrapper">
     <div :id="targetId" class="map-container"></div>
+
+    <div v-if="!is3DMode" :id="targetId" class="map-container"></div>
+    
+    <CesiumMap v-else @back-to-2d="handleBackTo2D" />
+
+    <LoadingMask :visible="!isInitialized && !is3DMode" text="地图加载中..." :z-index="1000" />
+    
+    <LayerControl v-if="!is3DMode" :layers="layerList" @toggle="handleLayerToggle" @opacity-change="handleOpacityChange" @go-3d="is3DMode = true" />
     
     <LoadingMask 
       :visible="!isInitialized" 
@@ -40,9 +48,11 @@
     </div>
     
     <LayerControl 
-      :layers="layerList"
-      @toggle="handleLayerToggle"
-      @opacity-change="handleOpacityChange"
+      v-if="!is3DMode" 
+      :layers="layerList" 
+      @toggle="handleLayerToggle" 
+      @opacity-change="handleOpacityChange" 
+      @go-3d="is3DMode = true" 
     />
     
     <!-- 半径查询组件 -->
@@ -157,8 +167,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'  // 添加路由
+import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { toLonLat, fromLonLat } from 'ol/proj'
 import { Feature } from 'ol'
@@ -174,6 +184,51 @@ import RadiusQuery from '@/components/map/RadiusQuery.vue'
 import StandEditDrawer from '@/components/stand/StandEditDrawer.vue'
 import { useMap } from '@/composables/useMap'
 import { fetchStands, createStand, updateStand, deleteStand,fetchStandDetail } from '@/api/forest'
+import CesiumMap from '@/components/cesium/CesiumMap.vue'
+const is3DMode = ref(false)
+
+// ==================== 3D 转 2D 并定位 ====================
+const handleBackTo2D = async (targetData) => {
+  is3DMode.value = false // 切回 2D
+
+  // 如果有携带坐标数据，进行定位和弹窗
+  if (targetData && targetData.lon && targetData.lat) {
+    // 必须等待 2D 地图的 DOM 完全渲染出来再操作
+    await nextTick()
+    
+    // 1. 飞行定位
+    if (view.value) {
+      view.value.animate({
+        center: fromLonLat([targetData.lon, targetData.lat]),
+        zoom: 16, // 飞到一个合适的层级看清林分
+        duration: 1000
+      })
+    }
+
+    // 2. 高亮该林分
+    if (targetData.standId) {
+      highlightStandById(targetData.standId)
+    }
+
+    // 3. 弹出 2D 详情窗口 (复用你原有的 showStandPopup 逻辑)
+    const coordinate = fromLonLat([targetData.lon, targetData.lat])
+    const data = {
+      type: 'stand_detail',
+      standId: targetData.standId,
+      standName: targetData.standName || '未命名林分',
+      standNo: targetData.xiaoBanCode || '-',
+      species: targetData.dominantSpecies || '未知',
+      origin: targetData.origin || '未知',
+      area: targetData.areaHa || 0,
+      volumePerHa: targetData.volumePerHa || 0,
+      totalVolume: ((targetData.volumePerHa || 0) * (targetData.areaHa || 0)).toFixed(2),
+      age: targetData.standAge,
+      density: targetData.canopyDensity,
+      _raw: targetData // 把原始数据存着，以防点击编辑
+    }
+    showPopup(data, coordinate)
+  }
+}
 
 const props = defineProps({
   targetId: {
@@ -195,7 +250,6 @@ const emit = defineEmits([
 // 添加路由
 const router = useRouter()
 
-// 引用和状态定义保持不变...
 const radiusQueryRef = ref(null)
 const editDrawerRef = ref(null)
 const isInitialized = ref(false)
@@ -358,7 +412,6 @@ const showStandPopup = (stand, coordinate) => {
   showPopup(data, coordinate)
 }
 
-// 其他方法保持不变...
 const handleLayerToggle = (layerName, visible) => {
   toggleLayer(layerName, visible)
   
@@ -647,7 +700,6 @@ const handleRadiusSelectStand = (stand) => {
   
   const coordinate = fromLonLat([stand.centerLon, stand.centerLat])
   
-  // 修复：使用 areaHa 计算总蓄积
   const totalVolume = ((stand.volumePerHa || 0) * (stand.areaHa || stand.area || 0)).toFixed(2)
   
   const data = {
@@ -688,7 +740,6 @@ function handleRadiusQueryResult(stands, lon, lat, radius) {
   console.log('半径查询结果:', stands.length, '个林分')
   emit('radius-query-result', stands, lon, lat, radius)
   
-  // 修复：使用 areaHa 而不是 area
   const totalVolume = stands.reduce((sum, s) => {
     const volume = (s.volumePerHa || 0) * (s.areaHa || s.area || 0)
     return sum + volume

@@ -14,6 +14,7 @@ import request from '@/api/request'
 
 import { CONFIG, SPECIES_COLORS } from '@/config'
 import { hexToRgba } from '@/utils/formatters'
+import coordtransform from 'coordtransform'
 
 export function useLayers(map) {
     const layerInstances = ref({})
@@ -333,82 +334,70 @@ export function useLayers(map) {
             console.warn('标记图层未找到')
             return
         }
-
         try {
             console.log('正在加载林分标记数据...')
-            
             const stands = await request.get('/stands')
-            
             if (!Array.isArray(stands) || stands.length === 0) {
                 console.warn('返回的林分数据为空')
                 return
             }
-
             const features = stands.map(stand => {
-            if (!stand.centerLon || !stand.centerLat) {
-                console.warn(`林分 ${stand.standId} 缺少坐标`)
-                return null
-            }
-            
-            if (!stand.standId) {
-                console.warn('林分缺少 standId:', stand)
-                return null
-            }
+                if (!stand.centerLon || !stand.centerLat) {
+                    console.warn(`林分 ${stand.standId} 缺少坐标`)
+                    return null
+                }
+                if (!stand.standId) {
+                    console.warn('林分缺少 standId:', stand)
+                    return null
+                }
 
-            // 创建 Feature 时确保所有关键字段都被正确设置
-            const feature = new Feature({
-                geometry: new Point(fromLonLat([stand.centerLon, stand.centerLat])),
-                
-                // 标准字段名（驼峰）- 用于显示
-                standId: stand.standId,
-                xiaoBanCode: stand.xiaoBanCode || '-',
-                standName: stand.standName || '未命名',
-                areaHa: stand.areaHa || 0,
-                volumePerHa: stand.volumePerHa || 0,
-                totalVolume: stand.totalVolume || 0,
-                dominantSpecies: stand.dominantSpecies || '未知',
-                origin: stand.origin || '未知',
-                standAge: stand.standAge || '-',
-                canopyDensity: stand.canopyDensity || '-',
-                centerLon: stand.centerLon,
-                centerLat: stand.centerLat,
-                
-                // 下划线版本（兼容性）
-                stand_id: stand.standId,
-                xiao_ban_code: stand.xiaoBanCode || '-',
-                stand_name: stand.standName || '未命名',
-                area_ha: stand.areaHa || 0,
-                volume_per_ha: stand.volumePerHa || 0,
-                total_volume: stand.totalVolume || 0,
-                dominant_species: stand.dominantSpecies || '未知',
-                stand_age: stand.standAge || '-',
-                canopy_density: stand.canopyDensity || '-',
-                
-                // 原始完整数据（备用）- 确保包含所有可能的字段
-                _raw: { ...stand }
-            })
+                const gcjCoord = coordtransform.wgs84togcj02(
+                    parseFloat(stand.centerLon), 
+                    parseFloat(stand.centerLat)
+                )
 
-            // 显式设置 Feature ID，这对识别非常重要
-            feature.setId(stand.standId)
-            
-            return feature
-        }).filter(f => f !== null)
+                const feature = new Feature({
+                    geometry: new Point(fromLonLat(gcjCoord)),
+                    
+                    standId: stand.standId,
+                    xiaoBanCode: stand.xiaoBanCode || '-',
+                    standName: stand.standName || '未命名',
+                    areaHa: stand.areaHa || 0,
+                    volumePerHa: stand.volumePerHa || 0,
+                    totalVolume: stand.totalVolume || 0,
+                    dominantSpecies: stand.dominantSpecies || '未知',
+                    origin: stand.origin || '未知',
+                    standAge: stand.standAge || '-',
+                    canopyDensity: stand.canopyDensity || '-',
+                    centerLon: stand.centerLon, // 注意：这里存原始 4326 坐标
+                    centerLat: stand.centerLat,
+                    stand_id: stand.standId,
+                    xiao_ban_code: stand.xiaoBanCode || '-',
+                    stand_name: stand.standName || '未命名',
+                    area_ha: stand.areaHa || 0,
+                    volume_per_ha: stand.volumePerHa || 0,
+                    total_volume: stand.totalVolume || 0,
+                    dominant_species: stand.dominantSpecies || '未知',
+                    stand_age: stand.standAge || '-',
+                    canopy_density: stand.canopyDensity || '-',
+                    _raw: { ...stand }
+                })
+                feature.setId(stand.standId)
+                return feature
+            }).filter(f => f !== null)
 
             markerLayer.getSource().clear()
             markerLayer.getSource().addFeatures(features)
-            
             console.log(`✓ 加载了 ${features.length} 个林分标记`)
-            
             markerLayer.changed()
-            
             if (wmsError.value) {
                 markerLayer.setVisible(true)
             }
-            
         } catch (error) {
             console.error('❌ 加载林分标记失败:', error.message)
         }
     }
+
 
     const refreshHeatmapData = async () => {
         const layer = getLayerByName('heatmap')
@@ -418,7 +407,6 @@ export function useLayers(map) {
         if (source.getFeatures().length > 0) return
 
         try {
-            // 使用 request 替代 fetch
             const stands = await request.get('/stands')
             loadHeatmapFeatures(stands)
         } catch (error) {
@@ -429,17 +417,19 @@ export function useLayers(map) {
     const loadHeatmapFeatures = (stands) => {
         const layer = getLayerByName('heatmap')
         if (!layer) return
-
         const features = stands.map(stand => {
+            const gcjCoord = coordtransform.wgs84togcj02(
+                parseFloat(stand.centerLon), 
+                parseFloat(stand.centerLat)
+            )
             return new Feature({
-                geometry: new Point(fromLonLat([stand.centerLon, stand.centerLat])),
+                geometry: new Point(fromLonLat(gcjCoord)),
                 volume_per_ha: stand.volumePerHa,
                 stand_name: stand.standName,
                 dominant_species: stand.dominantSpecies,
                 stand_id: stand.id
             })
         })
-
         layer.getSource().clear()
         layer.getSource().addFeatures(features)
     }
