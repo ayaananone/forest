@@ -11,6 +11,7 @@ import { XYZ } from 'ol/source'
 import { Style, Stroke, Fill, Circle as CircleStyle } from 'ol/style'
 
 import { CONFIG } from '@/config'
+import { fetchNearbyStands } from '@/api/forest'
 import { useLayers } from './useLayers'
 import { usePopup } from './usePopup'
 
@@ -175,8 +176,7 @@ export function useMap(targetId, options = {}) {
             
             try {
                 showLoading(coordinate)
-                
-                const { fetchNearbyStands } = await import('@/api/forest')
+
                 const stands = await fetchNearbyStands(lonLat[0], lonLat[1], radius)
                 
                 // 计算统计数据
@@ -635,7 +635,6 @@ export function useMap(targetId, options = {}) {
         const radius = radiusQueryRadius.value
 
         try {
-            const { fetchNearbyStands } = await import('@/api/forest')
             const stands = await fetchNearbyStands(lon, lat, radius)
 
             showRadiusCircle(lon, lat, radius)

@@ -165,7 +165,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick, defineAsyncComponent } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { toLonLat, fromLonLat } from 'ol/proj'
@@ -182,9 +182,10 @@ import RadiusQuery from '@/components/map/RadiusQuery.vue'
 import StandEditDrawer from '@/components/stand/StandEditDrawer.vue'
 import { useMap } from '@/composables/useMap'
 import { fetchStands, createStand, updateStand, deleteStand,fetchStandDetail } from '@/api/forest'
-import CesiumMap from '@/components/cesium/CesiumMap.vue'
 import coordtransform from 'coordtransform'
+
 const is3DMode = ref(false)
+const CesiumMap = defineAsyncComponent(() => import('@/components/cesium/CesiumMap.vue'))
 
 // ==================== 3D 转 2D 并定位 ====================
 const handleBackTo2D = async (targetData) => {
